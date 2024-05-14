@@ -6,6 +6,7 @@
 from numpy import bitwise_and
 from numpy import bitwise_or
 from numpy import bitwise_not
+from numpy import binary_repr
  
 #   Class C subnet example: 
 #   - Given 192.168.10.129 255.255.255.128
@@ -20,15 +21,38 @@ from numpy import bitwise_not
 #
 #   - Decrement Broadcast by 1 to get last usable host address = 192.168.10.254
 #
-#   Interesting octet:  128
-#   Magic number:       256 - 128 = 128 -> # of total addresses in the range
+#   Output:
+#
 #   Network ID:         192.168.10.128
 #   First host:         192.168.10.129
 #   Last host:          192.168.10.254
 #   Broadcast:          192.168.10.255
 #   Subnet class:       C
-#   # of subnets:       2 (b/c 1 subnet bit)
-#   # hosts/subnet:     126 (subtract 2 for ID and broadcast)
+#   # of subnets:       2^1 = 2
+#   # hosts/subnet:     2^7 - 2 = 126
+
+#   Class B subnet example:
+#   - Given 172.16.31.40 255.255.240.0
+#   - Mask: 11111111 11111111 11110000 00000000
+#   - Addr: 10101100 00010000 00011111 00101000
+#   - ID:   10101100 00010000 00010000 00000000 = 172.16.16.0
+#
+#   - First host: 172.16.16.1
+#
+#   - Wild: 00000000 00000000 00001111 11111111
+#   - Brd:  10101100 00010000 00011111 11111111 = 172.16.31.255 <- wild | id
+#
+#   - Last host: 172.16.31.254
+#
+#   Output:
+#
+#   Network ID:         172.16.16.0
+#   First host:         172.16.16.1
+#   Last host:          172.16.31.254
+#   Broadcast:          172.16.31.255
+#   Subnet class:       B
+#   # of subnets:       2^4 = 16
+#   # hosts/subnet:     2^12 - 2 = 4094
 
 ##### CIDR to subnet mask dictionary #####
 
@@ -83,17 +107,8 @@ def get_subnet_info_given_mask( ipv4_str, subnet_mask_str ):
     first_host = get_first_host( network_id ) # Get the first host address
     last_host = get_last_host( broadcast ) # Get the last host address
     subnet_class = get_subnet_class( subnet_mask ) # Get the subnet class
-    num_hosts = get_num_hosts()
-    num_subnets = get_num_subnets()
-
-    # TODO:
-    # - Find host bits and subnet bits
-    # - Find # of subnets per network (of the given class)
-    # - Find # of hosts per subnet
-    #
-    # e.g. given class C subnet, 2 subnet bits, 6 host bits
-    # - 2^2 = 4 subnets per class C network
-    # - 2^6 - 2 = 62 hosts per subnet
+    num_hosts = get_num_hosts( subnet_mask )
+    num_subnets = get_num_subnets( subnet_mask )
 
 # Returns IPv4 subnet information given an IPv4 address and a CIDR value
 def get_subnet_info_given_cidr( ipv4_str, cidr ):
@@ -135,15 +150,36 @@ def get_subnet_class( subnet_mask ):
         return 'B'
     else:
         return 'C'
-    
-def get_num_hosts():
-    return 0
 
-def get_num_subnets():
-    return 0
+# Gets the number of host addresses for the given subnet, minus the network ID and broadcast address
+def get_num_hosts( subnet_mask ):
+    for oct in subnet_mask:
+        if oct != 255:
+            host_bits = get_num_host_bits( oct, subnet_mask )
+            return 2^host_bits - 2
+            
+# Gets the number of possible subnets for the given mask that could segment that class of network
+# e.g. get_num_subnets( [255, 255, 255, 128] ) -> 2 -> b/c 255.255.255.0 is for class C networks, 255.255.255.128 segments that class C network into two /25 subnets
+def get_num_subnets( subnet_mask ):
+    for oct in subnet_mask:
+        if oct != 255:
+            subnet_bits = get_num_subnet_bits( oct )
+            return 2^subnet_bits
 
-def get_num_host_bits():
-    return 0
+# Gets the number of subnet bits by counting the number of 1 bits in the given octet
+def get_num_subnet_bits( octet ):
+    bit_string = binary_repr( octet )
+    count = 0
+    for b in bit_string:
+        if b == '1': count += 1
+    return count
 
-def get_num_subnet_bits():
-    return 0
+# Gets the number of host bits for an octet by subtracting the number of subnet bits from 8 (8 bits per 1-byte octet)
+def get_num_host_bits( octet, subnet_mask ):
+    class_to_extra_bits = { # Depending on the subnet class, need to add on extra bits to get the total number of host bits
+        'none' : 24,
+        'A' : 16,
+        'B' : 8,
+        'C' : 0
+    }
+    return 8 - get_num_subnet_bits( octet ) + class_to_extra_bits[ get_subnet_class( subnet_mask ) ]
