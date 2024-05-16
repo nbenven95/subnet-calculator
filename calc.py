@@ -1,19 +1,17 @@
 # calc.py contains the bulk of the logic for calculating subnets.
 # Used by netcalc.py to get subnet information given an arbitrary IPv4 address and subnet mask or CIDR value.
 
-# TODO: Finish input validation
-# TODO: Testing:
-# - get_subnet_info_given_mask
-# - get_subnet_info_given_cidr
-# - cidr_to_netmask
-# - netmask_to_cidr             DONE
-# - parse_addr_str              Not yet implemented
-# - get_first_host
-# - get_last_host
-# - get_subnet_class
-# - get_num_hosts
-# - get_num_subnets
-# - cidr_to_str                 DONE
+# - get_subnet_info_given_mask  TODO: test, input type validation
+# - get_subnet_info_given_cidr  TODO: test, input type validation
+# - cidr_to_netmask             TODO: input type validation
+# - netmask_to_cidr             TODO: input type validation
+# - parse_addr_str              TODO: implement, test, input type validation
+# - get_first_host              TODO: test, input type validation, handle edge case for /0, /31 and /32 subnets
+# - get_last_host               TODO: test, input type validation, handle edge case for /0, /31 and /32 subnets
+# - get_subnet_class            TODO: input type validation, handle edge case for /0, /31 and /32 subnets
+# - get_num_hosts               TODO: test, input type validation, handle edge case for /0, /31 and /32 subnets
+# - get_num_subnets             TODO: test, input type validation, handle edge case for /0, /31 and /32 subnets
+# - cidr_to_str                 TODO: input type validation
 
 from numpy import bitwise_and
 from numpy import bitwise_or
@@ -119,9 +117,9 @@ get_subnet_info_given_mask( '192.168.10.1', '255.255.255.0' ) ->
 { 
     'network_id' : '192.168.10.0', 
     'subnet_mask' : '255.255.255.0',
+    'wildcard_mask' : '0.0.0.255', 
     'cidr_int' : 24,
     'cidr_str' : '/24',
-    'wildcard_mask' : '0.0.0.255', 
     'subnet_class' : 'C', 
     'first_host' : '192.168.10.1', 
     'last_host' : '192.168.10.254', 
@@ -143,14 +141,14 @@ def get_subnet_info_given_mask( ipv4_str, subnet_mask_str ):
     num_hosts       = get_num_hosts( wildcard_mask )            # Get the number of usable host addresses -> multiply wildcard mask octets (+1 to each), subtract 2 from total
     num_subnets     = get_num_subnets( subnet_mask )            # Get the number of subnets per network of the given class -> 2^(subnet_bits)
     cidr_int        = netmask_to_cidr( subnet_mask_str )        # Get the CIDR integer value from the subnet mask
-    cidr_str        = cidr_to_string( cidr_int )                # Get the CIDR string representation
+    cidr_str        = cidr_to_str( cidr_int )                   # Get the CIDR string representation
     
     return { 
         'network_id' : network_id, 
         'subnet_mask' : subnet_mask,
+        'wildcard_mask' : wildcard_mask, 
         'cidr_int' : cidr_int,
         'cidr_str' : cidr_str,
-        'wildcard_mask' : wildcard_mask, 
         'subnet_class' : subnet_class, 
         'first_host' : first_host, 
         'last_host' : last_host, 
@@ -166,9 +164,9 @@ get_subnet_info_given_cidr( '192.168.10.1', 24 ) ->
 { 
     'network_id' : '192.168.10.0', 
     'subnet_mask' : '255.255.255.0',
+    'wildcard_mask' : '0.0.0.255', 
     'cidr_int' : 24,
     'cidr_str' : '/24',
-    'wildcard_mask' : '0.0.0.255', 
     'subnet_class' : 'C', 
     'first_host' : '192.168.10.1', 
     'last_host' : '192.168.10.254', 
@@ -178,7 +176,7 @@ get_subnet_info_given_cidr( '192.168.10.1', 24 ) ->
 }
 '''
 def get_subnet_info_given_cidr( ipv4_str, cidr ):
-    return get_subnet_info_given_mask( ipv4_str, cidr_to_netmask( cidr ) )
+    return get_subnet_info_given_mask( ipv4_str, cidr_to_netmask(cidr) )
 
 '''
 Given a valid CIDR value, returns the corresponding subnet mask as a string
@@ -187,12 +185,12 @@ cidr_to_netmask( 24 ) -> '255.255.255.0'
 '''
 def cidr_to_netmask( cidr ):
     try:
-        cidr = int(cidr)
-        if cidr < 0 | cidr > 32:
-            raise ValueError('CIDR must be within the range [0,32]. Given: {}'.format(cidr))
-    except ValueError:
-        raise TypeError('{} is not a valid integer'.format(cidr))
-    return cidr_dict[ cidr ]
+        cidr = int( cidr )
+        return cidr_dict[ cidr ]
+    except ValueError as e:
+        print( '\'{}\' is not a valid integer\nHandled exception: {}'.format(cidr, repr(e)) )
+    except KeyError as e:
+        print( 'CIDR must be within the range [ 0, 32 ] (Given: {})\nHandled exception: {}'.format(cidr, repr(e)) )
 
 '''
 Given a valid subnet mask string, returns the corresponding CIDR value as an integer
@@ -201,13 +199,12 @@ netmask_to_cidr( '255.255.255.0' ) -> 24
 '''
 def netmask_to_cidr( subnet_mask ):
     cidr_vals = [ c for c in range (33) ]                                       # List comprehension that generates an array of integers [0, 32]
-    key_iterator = filter( lambda k: cidr_dict[ k ] == subnet_mask, cidr_vals)  # Filter out CIDR values where cidr_dict[value] == subnet_mask
+    key_iterator = filter( lambda k: cidr_dict[ k ] == subnet_mask, cidr_vals ) # Filter out CIDR values where cidr_dict[value] == subnet_mask
     try:                                                                        
-        key = next(key_iterator)                                                # Only one CIDR should match subnet_mask, get it and return
+        key = next( key_iterator )                                              # Only one CIDR should match subnet_mask, get it and return
         return key
     except StopIteration:                                                       # If bad input was provided, need to catch error for empty iterator
         return -1                                                               # If no matching CIDR was found, return -1
-                                                                                # TODO: Add a sanity check for a list that contains more than 1 key -> should throw an error
 
 '''
 Parses an IPv4 address/netmask for octet values and returns an array containing the integer values
@@ -224,7 +221,7 @@ e.g.
 get_first_host( [192, 168, 10, 0] ) -> [192, 168, 10, 1]
 '''
 def get_first_host( net_id ):
-    return [ sum(x) for x in zip( net_id, [0, 0, 0, 1] ) ] # Get the first host addr by incrementing the net ID by 1
+    return [ sum(x) for x in zip(net_id, [0, 0, 0, 1]) ] # Get the first host addr by incrementing the net ID by 1
 
 '''
 Finds the last host address given the broadcast address
@@ -232,7 +229,7 @@ e.g.
 get_last_host( [192, 168, 10, 255] ) -> [192, 168, 10, 254]
 '''
 def get_last_host( broadcast ):
-    return [ sum(x) for x in zip( broadcast, [0, 0, 0, -1] ) ] # Get the last host addr by decrementing the broadcast addr by 1
+    return [ sum(x) for x in zip(broadcast, [0, 0, 0, -1]) ] # Get the last host addr by decrementing the broadcast addr by 1
 
 '''
 Given a subnet mask in the form of an array of octets, returns the subnet class
@@ -278,38 +275,23 @@ def get_num_subnets( subnet_mask ):
             return 2 ^ subnet_bits # Return the number of subnets based on the number of subnet bits
         
     # Should only reach this point if 255.255.255.255 is passed ->
-    # This is a network with only 1 host, meaning potentially 256 subnets with 1 host each (I think?)
-    # TODO: do more research on this edge case, for now this is fine.
+    # This is a network with only 1 host, meaning potentially 256 subnets with 1 host each
     return 256
 
 '''
-Given a valid CIDR value (a positive integer from 0 - 32, inclusive), returns the string representation
+Given a valid CIDR value, returns the string representation
 e.g.
 cidr_to_string( 24 ) -> '/24'
 '''
-def cidr_to_string( cidr ):
-    sb = []
-    sb.append('/')
-    sb.append(str(cidr))
-    return ''.join(sb)
-
-'''
-# Gets the number of subnet bits by counting the number of 1 bits in the given octet
-def get_num_subnet_bits( octet ):
-    bit_string = binary_repr( octet )
-    count = 0
-    for b in bit_string:
-        if b == '1': count += 1
-    return count
-'''
-'''
-# Gets the number of host bits for an octet by subtracting the number of subnet bits from 8 (8 bits per 1-byte octet)
-def get_num_host_bits( octet, subnet_mask ):
-    class_to_extra_bits = { # Depending on the subnet class, need to add on extra bits to get the total number of host bits
-        'none' : 24,
-        'A' : 16,
-        'B' : 8,
-        'C' : 0
-    }
-    return 8 - get_num_subnet_bits( octet ) + class_to_extra_bits[ get_subnet_class( subnet_mask ) ]
-'''
+def cidr_to_str( cidr ):
+    try:
+        cidr = int( cidr )
+        if cidr < 0 | cidr > 32:
+            return 'INVALID CIDR: {}'.format( cidr )
+        else:
+            sb = []
+            sb.append( '/' )
+            sb.append( str(cidr) )
+            return ''.join( sb )
+    except ValueError as e:
+        print( '\'{}\' is not a valid integer\nHandled exception: {}'.format(cidr, repr(e)) )
