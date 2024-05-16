@@ -1,4 +1,4 @@
-# calc.py contains the bulk of the logic for calculating subnets.
+# subnet-calculator.py contains the bulk of the logic for calculating subnets.
 # Used by netcalc.py to get subnet information given an arbitrary IPv4 address and subnet mask or CIDR value.
 
 # - get_subnet_info_given_mask  TODO: test, input type validation
@@ -18,52 +18,7 @@ from numpy import bitwise_or
 from numpy import bitwise_not
 from numpy import binary_repr
 from numpy import prod
- 
-#   Class C subnet example: 
-#   - Given 192.168.10.129 255.255.255.128
-#   - Mask: 11111111 11111111 11111111 10000000
-#   - Addr: 11000000 10101000 00001010 10000001
-#   - AND:  11000000 10101000 00001010 10000000 <- Network ID = address & netmask = 192.168.10.128
-#
-#   - Increment NetID by 1 to get the first usable host address = 192.168.10.129
-#
-#   - Wild: 00000000 00000000 00000000 01111111 <- Wildcard mask = ~(netmask) = 0.0.0.127
-#   - OR:   11000000 10101000 00001010 11111111 <- Broadcast address = netID OR wildcard = 192.168.10.255
-#
-#   - Decrement Broadcast by 1 to get last usable host address = 192.168.10.254
-#
-#   Output:
-#
-#   Network ID:         192.168.10.128
-#   First host:         192.168.10.129
-#   Last host:          192.168.10.254
-#   Broadcast:          192.168.10.255
-#   Subnet class:       C
-#   # of subnets:       2^1 = 2
-#   # hosts/subnet:     2^7 - 2 = 126
-
-#   Class B subnet example:
-#   - Given 172.16.31.40 255.255.240.0
-#   - Mask: 11111111 11111111 11110000 00000000 = 255.255.240.0
-#   - Addr: 10101100 00010000 00011111 00101000 = 172.16.31.40
-#   - ID:   10101100 00010000 00010000 00000000 = 172.16.16.0
-#
-#   - First host: 172.16.16.1
-#
-#   - Wild: 00000000 00000000 00001111 11111111 = 0.0.15.255
-#   - Brd:  10101100 00010000 00011111 11111111 = 172.16.31.255 <- netID OR wildcard
-#
-#   - Last host: 172.16.31.254
-#
-#   Output:
-#
-#   Network ID:         172.16.16.0
-#   First host:         172.16.16.1
-#   Last host:          172.16.31.254
-#   Broadcast:          172.16.31.255
-#   Subnet class:       B
-#   # of subnets:       2^4 = 16
-#   # hosts/subnet:     2^12 - 2 = 4094
+from re    import split
 
 #|##################################################| CIDR to subnet mask dictionary |##################################################|#
 
@@ -201,8 +156,8 @@ def netmask_to_cidr( subnet_mask ):
     cidr_vals = [ c for c in range (33) ]                                       # List comprehension that generates an array of integers [0, 32]
     key_iterator = filter( lambda k: cidr_dict[ k ] == subnet_mask, cidr_vals ) # Filter out CIDR values where cidr_dict[value] == subnet_mask
     try:                                                                        
-        key = next( key_iterator )                                              # Only one CIDR should match subnet_mask, get it and return
-        return key
+        cidr = next( key_iterator )                                             # Only one CIDR should match subnet_mask, get it and return
+        return cidr
     except StopIteration:                                                       # If bad input was provided, need to catch error for empty iterator
         return -1                                                               # If no matching CIDR was found, return -1
 
@@ -212,8 +167,9 @@ e.g.
 parse_addr_str( '192.168.10.1' ) -> [192, 168, 10, 1]
 '''
 def parse_addr_str( addr_string ):
-    raise NotImplementedError( 'parse_addr_str( addr_string ) not implemented' )
-    return 0
+    oct_list_str = split( '[.]', addr_string )            # Split the input string into four separate strings
+    oct_list_int = [ int(oct) for oct in oct_list_str ] # Convert the string tokens to integers
+    return oct_list_int
 
 '''
 Finds the first host address given the network ID
@@ -265,18 +221,14 @@ e.g. get_num_subnets( [255, 255, 255, 128] ) -> 2
 This segments the /24 network into 2^(subnet_bits) = 2^1 = 2 /25 subnets.
 '''
 def get_num_subnets( subnet_mask ):
-    # Find the "interesting octet"
     for oct in subnet_mask:
-        if oct != 255: # Find the "interesting octet", i.e. the first non-255 octet
-            bit_string = binary_repr( oct ) # Convert the interesting octet to binary representation
-            subnet_bits = 0 # Count the number of 1-bits
+        if oct != 255:                          # Find the "interesting octet", i.e. the first non-255 octet
+            bit_string = binary_repr( oct )     # Convert the interesting octet to binary representation
+            subnet_bits = 0                     # Count the number of 1-bits
             for b in bit_string:
                 if b == '1': subnet_bits += 1
-            return 2 ^ subnet_bits # Return the number of subnets based on the number of subnet bits
-        
-    # Should only reach this point if 255.255.255.255 is passed ->
-    # This is a network with only 1 host, meaning potentially 256 subnets with 1 host each
-    return 256
+            return 2 ^ subnet_bits              # Return the number of subnets based on the number of subnet bits
+    return 256                                  # Should only reach this point if 255.255.255.255 is passed -> network with only 1 host, 256 1-host subnets
 
 '''
 Given a valid CIDR value, returns the string representation
@@ -287,7 +239,7 @@ def cidr_to_str( cidr ):
     try:
         cidr = int( cidr )
         if cidr < 0 | cidr > 32:
-            return 'INVALID CIDR: {}'.format( cidr )
+            print( 'CIDR must be within the range [ 0, 32 ] (Given: {})'.format(cidr) )
         else:
             sb = []
             sb.append( '/' )
