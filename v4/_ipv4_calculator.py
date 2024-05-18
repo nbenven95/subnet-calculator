@@ -1,5 +1,5 @@
 '''
-Used by calc.py to obtain detailed subnet information given an arbitrary IPv4 address and subnet mask/CIDR value.
+Calculates detailed IPv4 subnet information given an arbitrary IPv4 address and subnet mask/CIDR value.
 
 Author: Noah Benveniste
 https://github.com/noahbenveniste/subnet-calculator
@@ -26,7 +26,7 @@ from numpy import binary_repr
 from numpy import prod
 from re    import split
 
-from IPv4Validator import argument_type_validator as arg_valid
+from v4._ipv4_validator import argument_type_validator as arg_valid
 
 #|##################################################| CIDR to subnet mask dictionary |##################################################|#
 

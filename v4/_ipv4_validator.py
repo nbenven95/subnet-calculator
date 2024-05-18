@@ -11,7 +11,7 @@ Function that returns a lambda expression that will validate input arguments of 
 e.g.
 float_valid = argument_type_validator( float )
 float_valid( 3.14 ) -> True
-float_valid( 3 ) -> TypeError
+float_valid( 3 ) -> raise TypeError
 '''
 def argument_type_validator( t: type ):
     if not isinstance( t, type ): raise TypeError
