@@ -277,8 +277,14 @@ validate_octet_list( [255,255,255,0] ) -> True
 validate_octet_list( [0,255,255,255] ) -> raise ValueError
 '''
 def validate_octet_list( subnet_mask: list ):
-    list_valid( subnet_mask )                                                                  # Ensure input is a list
-    all( int_valid( i ) for i in subnet_mask )                                                 # Ensure all list elements are integers
+    list_valid( subnet_mask )                    # Ensure input is a list
+    all( int_valid(oct) for oct in subnet_mask ) # Ensure all list elements are integers
+    _mask = [ str(oct) for oct in subnet_mask ]  # Convert all elements back to strings
+    # Insert a '.' every other element, drop the final one
+    # Join the list into a single string
+    # Call netmask_to_cidr, as long as -1 doesn't return, the input was valid
+    
+    '''
     if (
         not len( subnet_mask ) == 4 or                                                         # List must have exactly 4 elements
         not all( 0 <= oct <= 255 for oct in subnet_mask ) or                                   # Each element must be within the range [0, 255]
@@ -287,3 +293,4 @@ def validate_octet_list( subnet_mask: list ):
         raise ValueError( BAD_SUBNET_MASK_ERROR.format(subnet_mask) )
     else:
         return True
+    '''
