@@ -1,5 +1,3 @@
-# This file will act as a validator for IPv4 addresses using RegEx and will be called by calc.py
-
 # TODO:
 # Validate the IPv4 address and subnet masks/CIDR
 #   
@@ -15,9 +13,9 @@ float_valid( 3 ) -> raise TypeError
 '''
 def argument_type_validator( t: type ):
     if not isinstance( t, type ): raise TypeError
-    return lambda arg : True if isinstance( arg, t ) else raise_( TypeError( '\'{}\' is not a valid {}'.format(arg, repr(t)) ) )
+    return lambda arg : True if isinstance( arg, t ) else _raise( TypeError( '\'{}\' is not a valid {}'.format(arg, repr(t)) ) )
 
 '''
 Helper function that allows us to conditionally raise errors from lambda expression
 '''
-def raise_( err ): raise err
+def _raise( err ): raise err

@@ -3,7 +3,8 @@ from v4._ipv4_calculator import cidr_to_str                     # Implemented
 from v4._ipv4_calculator import cidr_to_netmask                 # Implemented
 from v4._ipv4_calculator import netmask_to_cidr                 # Implemented
 from v4._ipv4_calculator import parse_addr_str                  # Implemented
-from v4._ipv4_calculator import get_subnet_class
+from v4._ipv4_calculator import validate_octet_list             
+from v4._ipv4_calculator import get_subnet_class                # Implemented
 from v4._ipv4_calculator import get_num_hosts
 from v4._ipv4_calculator import get_num_subnets
 from v4._ipv4_calculator import get_first_host
@@ -16,7 +17,7 @@ Tests for cidr_to_str( cidr: int ) -> str
 '''
 def test_cidr_to_str():
 
-    # Test invalid input
+    # Test invalid input type
     with pytest.raises( TypeError ) as e_info:
         cidr_to_str( '16' )
     with pytest.raises( TypeError ) as e_info:
@@ -56,7 +57,7 @@ Tests for cidr_to_netmask( cidr: int ) -> str
 '''
 def test_cidr_to_netmask():
     
-    # Test invalid input
+    # Test invalid input type
     with pytest.raises( TypeError ) as e_info:
         cidr_to_netmask( '16' )
     with pytest.raises( TypeError ) as e_info:
@@ -96,7 +97,7 @@ Tests for netmask_to_cidr( subnet_mask: str ) -> int
 '''
 def test_netmask_to_cidr():
     
-    # Test invalid input
+    # Test invalid input type
     with pytest.raises( TypeError ) as e_info:
         netmask_to_cidr( 123456789 )
     with pytest.raises( TypeError ) as e_info:
@@ -130,7 +131,7 @@ Tests for parse_addr_str( addr_str: str ) -> list
 '''
 def test_parse_addr_str():
     
-    # Test invalid input
+    # Test invalid input type
     with pytest.raises( TypeError ) as e_info:
         parse_addr_str( 123456789 )
     with pytest.raises( TypeError ) as e_info:
@@ -153,41 +154,51 @@ def test_parse_addr_str():
     assert parse_addr_str( '255.255.255.255' ) == [255,255,255,255]
 
 '''
+'''
+def test_validate_octet_list():
+
+    # Test invalid input type
+    with pytest.raises( TypeError ) as e_info:
+        validate_octet_list( 123456789 )
+    with pytest.raises( TypeError ) as e_info:
+        validate_octet_list( '123456789' )
+    with pytest.raises( TypeError ) as e_info:
+        validate_octet_list( 12345.67890 )
+    with pytest.raises( TypeError ) as e_info:
+        validate_octet_list( [ 1.0, 2.0, 3.0, 4.0 ] )
+    with pytest.raises( TypeError ) as e_info:
+        validate_octet_list( [ '1.0', '2.0', '3.0', '4.0' ] )
+
+    # Test invalid list input
+    with pytest.raises( ValueError ) as e_info:
+        validate_octet_list( [ 255, 255, 255 ] )
+    with pytest.raises( ValueError ) as e_info:
+        validate_octet_list( [ 255, 255, 255, 255, 255 ] )
+    with pytest.raises( ValueError ) as e_info:
+        validate_octet_list( [ -255, 255, 255, 128 ] )
+    with pytest.raises( ValueError ) as e_info:
+        validate_octet_list( [ 255, -255, 255, 128 ] )
+    with pytest.raises( ValueError ) as e_info:
+        validate_octet_list( [ 255, 255, -255, 128 ] )
+    with pytest.raises( ValueError ) as e_info:
+        validate_octet_list( [ 255, 255, 255, -128 ] )
+    with pytest.raises( ValueError ) as e_info:
+        validate_octet_list( [ 256, 255, 255, 255 ] )
+    with pytest.raises( ValueError ) as e_info:
+        validate_octet_list( [ 0, 255, 255, 255 ] )
+
+    assert validate_octet_list( [254,253,252,251] ) == False # This breaks it. Probably easiest to just replace validate_octet_list with a lookup table or regex
+    
+    # Test valid input
+    assert validate_octet_list( [0,0,0,0] ) == True
+    assert validate_octet_list( [255,255,255,255] ) == True
+
+'''
 Tests for get_subnet_class( subnet_mask: list ) -> str
 '''
 def test_get_subnet_class():
 
-    # Test invalid input
-    with pytest.raises( TypeError ) as e_info:
-        get_subnet_class( 123456789 )
-    with pytest.raises( TypeError ) as e_info:
-        get_subnet_class( '123456789' )
-    with pytest.raises( TypeError ) as e_info:
-        get_subnet_class( 12345.67890 )
-    with pytest.raises( TypeError ) as e_info:
-        get_subnet_class( [ 1.0, 2.0, 3.0, 4.0 ] )
-    with pytest.raises( TypeError ) as e_info:
-        get_subnet_class( [ '1.0', '2.0', '3.0', '4.0' ] )
-
-    # Test invalid list input
-    with pytest.raises( ValueError ) as e_info:
-        get_subnet_class( [ 255, 255, 255 ] )
-    with pytest.raises( ValueError ) as e_info:
-        get_subnet_class( [ 255, 255, 255, 255, 255 ] )
-    with pytest.raises( ValueError ) as e_info:
-        get_subnet_class( [ -255, 255, 255, 128 ] )
-    with pytest.raises( ValueError ) as e_info:
-        get_subnet_class( [ 255, -255, 255, 128 ] )
-    with pytest.raises( ValueError ) as e_info:
-        get_subnet_class( [ 255, 255, -255, 128 ] )
-    with pytest.raises( ValueError ) as e_info:
-        get_subnet_class( [ 255, 255, 255, -128 ] )
-    with pytest.raises( ValueError ) as e_info:
-        get_subnet_class( [ 256, 255, 255, 255 ] )
-    with pytest.raises( ValueError ) as e_info:
-        get_subnet_class( [ 0, 255, 255, 255 ] )
-
-    # Test valid input
+    # Test valid input (invalid input is handled by test_validate_octet_list)
     assert get_subnet_class( [0,0,0,0] ) == 'none'
     assert get_subnet_class( [254,0,0,0] ) == 'none'
     assert get_subnet_class( [255,0,0,0] ) == 'A'

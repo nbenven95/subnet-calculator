@@ -12,7 +12,7 @@ https://github.com/noahbenveniste/subnet-calculator
 # - parse_addr_str              TODO: 
 # - get_first_host              TODO: test, handle edge case for /0, /31 and /32 subnets
 # - get_last_host               TODO: test, handle edge case for /0, /31 and /32 subnets
-# - get_subnet_class            TODO: handle edge case for /0, /31 and /32 subnets
+# - get_subnet_class            TODO: 
 # - get_num_hosts               TODO: test, handle edge case for /0, /31 and /32 subnets
 # - get_num_subnets             TODO: test, handle edge case for /0, /31 and /32 subnets
 # - cidr_to_str                 TODO: 
@@ -75,7 +75,6 @@ CIDR_DICT = {
 
 BAD_CIDR_ERROR = 'CIDR must be within the range [ 0, 32 ] - Given: {}'
 BAD_SUBNET_MASK_ERROR = 'Octet list must consist of four integers ranging from [0, 255], sorted in descending order - Given: {}'
-BAD_WILDCARD_MASK_ERROR = 'Octet list must consist of four integers ranging from [0, 255], sorted in ascending order - Given: {}'
 
 #|################################################| Argument type validator functions |################################################|#
 
@@ -182,12 +181,12 @@ def parse_addr_str( addr_str: str ) -> list:
     oct_list_str = split( '[.]', addr_str )                                                     # Split the input string into four separate strings
     try:
         oct_list_int = [ int(oct) for oct in oct_list_str ]                                     # Convert the string tokens to integers
-        if len( oct_list_int ) == 4 and all( oct >= 0 and oct <= 255 for oct in oct_list_int ):
+        if len( oct_list_int ) == 4 and all( 0 <= oct <= 255 for oct in oct_list_int ):
             return oct_list_int                                                                 # Return the list if it has exactly 4 elements that are all [0, 255]
         else:
             return []                                                                           # Else, return an empty list
     except ValueError:
-        return []                                                                               # If the cast to int fails, catch and return an empty list
+        return []                                                                               # If any cast to int fails, catch and return an empty list
 
 '''
 Finds the first host address given the network ID
@@ -213,7 +212,7 @@ e.g.
 get_subnet_class( [255, 255, 128, 0] ) -> 'B'
 '''
 def get_subnet_class( subnet_mask: list ) -> str:
-    _validate_subnet_mask( subnet_mask )
+    validate_octet_list( subnet_mask )
     if subnet_mask[0] != 255:
         return 'none'
     elif subnet_mask[1] != 255:
@@ -224,47 +223,16 @@ def get_subnet_class( subnet_mask: list ) -> str:
         return 'C'
 
 '''
-Private helper function for validating subnet masks
-'''
-def _validate_subnet_mask( subnet_mask: list ):
-
-    list_valid( subnet_mask )                  # Input type validation
-    all( int_valid( i ) for i in subnet_mask ) # Ensure all list elements are integers
-
-    # Ensure that list is exactly 4 elements, all elements are in range [0, 255], and elements are in DESCENDING order
-    if (
-        len( subnet_mask ) != 4 or not 
-        all( oct >= 0 and oct <= 255 for oct in subnet_mask ) or not
-        all( subnet_mask[i] >= subnet_mask[i + 1] for i in range(len(subnet_mask) - 1))
-    ):
-        raise ValueError( BAD_SUBNET_MASK_ERROR.format(subnet_mask) )
-
-'''
-Given a valid wildcard mask, returns the number of valid host addresses, minus the network ID and broadcast address
+Given a valid subnet mask, returns the number of valid host addresses, minus the network ID and broadcast address
 e.g.
-get_num_hosts( [0, 0, 0, 127] ) -> 126
+get_num_hosts( [255, 255, 255, 128] ) -> 126
 '''
-def get_num_hosts( wildcard_mask: list ) -> int:
-    _validate_wildcard_mask( wildcard_mask )
+def get_num_hosts( subnet_mask: list ) -> int:
+    validate_octet_list( subnet_mask )
+    wildcard_mask = bitwise_not( subnet_mask)       # Invert to get wildcard mask
     wild_plus_1 = [ w + 1 for w in wildcard_mask ]  # Get each element from the wildcard_mask array and add one
     addr_total = prod( wild_plus_1 )                # Multiply the values together to get the total number of addresses
     return addr_total - 2                           # Subtract 2 for the network ID and broadcast address to get the final number of valid hosts
-
-'''
-Private helper function for validating wildcard masks
-'''
-def _validate_wildcard_mask( wildcard_mask: list ):
-
-    list_valid( wildcard_mask )                  # Input type validation
-    all( int_valid( i ) for i in wildcard_mask ) # Ensure all list elements are integers
-
-    # Ensure that list is exactly 4 elements, all elements are in range [0, 255], and elements are in ASCENDING order
-    if (
-        len( wildcard_mask ) != 4 or not 
-        all( oct >= 0 and oct <= 255 for oct in wildcard_mask ) or not
-        all( wildcard_mask[i] <= wildcard_mask[i + 1] for i in range(len(wildcard_mask) - 1))
-    ):
-        raise ValueError( BAD_WILDCARD_MASK_ERROR.format(wildcard_mask) )
 
 '''
 Gets the number of possible subnets for the given mask that could segment that class of network
@@ -275,7 +243,7 @@ e.g. get_num_subnets( [255, 255, 255, 128] ) -> 2
 This segments the /24 network into 2^(subnet_bits) = 2^1 = 2 /25 subnets.
 '''
 def get_num_subnets( subnet_mask: list ) -> int:
-    list_valid( subnet_mask )                   # Input type validation
+    validate_octet_list( subnet_mask )
     for oct in subnet_mask:
         if oct != 255:                          # Find the "interesting octet", i.e. the first non-255 octet
             bit_string = binary_repr( oct )     # Convert the interesting octet to binary representation
@@ -299,3 +267,23 @@ def cidr_to_str( cidr: int ) -> str:
         return ''.join( sb )
     else:
         raise ValueError( BAD_CIDR_ERROR.format(cidr) )
+    
+# TODO: See if this can be done using regex, else just use a lookup table I can't be bothered anymore
+
+'''
+Helper function for validating a list of integers as a subnet mask
+e.g.
+validate_octet_list( [255,255,255,0] ) -> True
+validate_octet_list( [0,255,255,255] ) -> raise ValueError
+'''
+def validate_octet_list( subnet_mask: list ):
+    list_valid( subnet_mask )                                                                  # Ensure input is a list
+    all( int_valid( i ) for i in subnet_mask )                                                 # Ensure all list elements are integers
+    if (
+        not len( subnet_mask ) == 4 or                                                         # List must have exactly 4 elements
+        not all( 0 <= oct <= 255 for oct in subnet_mask ) or                                   # Each element must be within the range [0, 255]
+        not all( subnet_mask[i] >= subnet_mask[i + 1] for i in range( len(subnet_mask) - 1 ) ) # Elements must be in descending order
+    ):
+        raise ValueError( BAD_SUBNET_MASK_ERROR.format(subnet_mask) )
+    else:
+        return True
