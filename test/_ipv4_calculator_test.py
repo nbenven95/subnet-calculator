@@ -1,8 +1,8 @@
 import pytest
 from v4._ipv4_calculator import cidr_to_str                     # Implemented
 from v4._ipv4_calculator import cidr_to_netmask                 # Implemented
-from v4._ipv4_calculator import netmask_to_cidr
-from v4._ipv4_calculator import parse_addr_str
+from v4._ipv4_calculator import netmask_to_cidr                 # Implemented
+from v4._ipv4_calculator import parse_addr_str                  # Implemented
 from v4._ipv4_calculator import get_subnet_class
 from v4._ipv4_calculator import get_num_hosts
 from v4._ipv4_calculator import get_num_subnets
@@ -129,13 +129,77 @@ def test_netmask_to_cidr():
 Tests for parse_addr_str( addr_str: str ) -> list
 '''
 def test_parse_addr_str():
-    assert True
+    
+    # Test invalid input
+    with pytest.raises( TypeError ) as e_info:
+        parse_addr_str( 123456789 )
+    with pytest.raises( TypeError ) as e_info:
+        parse_addr_str( 3.14 )
+
+    # Test invalid string input
+    assert parse_addr_str( 'invalid' ) == []
+    assert parse_addr_str( '255.255.255' ) == []
+    assert parse_addr_str( '255.255' ) == []
+    assert parse_addr_str( '255' ) == []
+    assert parse_addr_str( '256.255.255.255' ) == []
+    assert parse_addr_str( '255.256.255.255' ) == []
+    assert parse_addr_str( '255.255.256.255' ) == []
+    assert parse_addr_str( '255.255.255.256' ) == []
+    assert parse_addr_str( '9999.2554314321.43255.254' ) == []
+
+    # Test valid input
+    assert parse_addr_str( '0.0.0.0' ) == [0,0,0,0]
+    assert parse_addr_str( '192.168.10.1' ) == [192,168,10,1]
+    assert parse_addr_str( '255.255.255.255' ) == [255,255,255,255]
 
 '''
 Tests for get_subnet_class( subnet_mask: list ) -> str
 '''
 def test_get_subnet_class():
-    assert True
+
+    # Test invalid input
+    with pytest.raises( TypeError ) as e_info:
+        get_subnet_class( 123456789 )
+    with pytest.raises( TypeError ) as e_info:
+        get_subnet_class( '123456789' )
+    with pytest.raises( TypeError ) as e_info:
+        get_subnet_class( 12345.67890 )
+    with pytest.raises( TypeError ) as e_info:
+        get_subnet_class( [ 1.0, 2.0, 3.0, 4.0 ] )
+    with pytest.raises( TypeError ) as e_info:
+        get_subnet_class( [ '1.0', '2.0', '3.0', '4.0' ] )
+
+    # Test invalid list input
+    with pytest.raises( ValueError ) as e_info:
+        get_subnet_class( [ 255, 255, 255 ] )
+    with pytest.raises( ValueError ) as e_info:
+        get_subnet_class( [ 255, 255, 255, 255, 255 ] )
+    with pytest.raises( ValueError ) as e_info:
+        get_subnet_class( [ -255, 255, 255, 128 ] )
+    with pytest.raises( ValueError ) as e_info:
+        get_subnet_class( [ 255, -255, 255, 128 ] )
+    with pytest.raises( ValueError ) as e_info:
+        get_subnet_class( [ 255, 255, -255, 128 ] )
+    with pytest.raises( ValueError ) as e_info:
+        get_subnet_class( [ 255, 255, 255, -128 ] )
+    with pytest.raises( ValueError ) as e_info:
+        get_subnet_class( [ 256, 255, 255, 255 ] )
+    with pytest.raises( ValueError ) as e_info:
+        get_subnet_class( [ 0, 255, 255, 255 ] )
+
+    # Test valid input
+    assert get_subnet_class( [0,0,0,0] ) == 'none'
+    assert get_subnet_class( [254,0,0,0] ) == 'none'
+    assert get_subnet_class( [255,0,0,0] ) == 'A'
+    assert get_subnet_class( [255,128,0,0] ) == 'A'
+    assert get_subnet_class( [255,254,0,0] ) == 'A'
+    assert get_subnet_class( [255,255,0,0] ) == 'B'
+    assert get_subnet_class( [255,255,128,0] ) == 'B'
+    assert get_subnet_class( [255,255,254,0] ) == 'B'
+    assert get_subnet_class( [255,255,255,0] ) == 'C'
+    assert get_subnet_class( [255,255,255,128] ) == 'C'
+    assert get_subnet_class( [255,255,255,254] ) == 'C'
+    assert get_subnet_class( [255,255,255,255] ) == 'C'
 
 '''
 Tests for get_num_hosts( wildcard_mask: list ) -> int
