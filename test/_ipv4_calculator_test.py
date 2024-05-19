@@ -95,7 +95,35 @@ def test_cidr_to_netmask():
 Tests for netmask_to_cidr( subnet_mask: str ) -> int
 '''
 def test_netmask_to_cidr():
-    assert True
+    
+    # Test invalid input
+    with pytest.raises( TypeError ) as e_info:
+        netmask_to_cidr( 123456789 )
+    with pytest.raises( TypeError ) as e_info:
+        netmask_to_cidr( 3.14 )
+
+    # Test invalid string input
+    assert netmask_to_cidr( 'invalid' ) == -1
+    assert netmask_to_cidr( '254.255.255.0' ) == -1
+
+    # Test valid input
+    assert netmask_to_cidr( '0.0.0.0' ) == 0
+    assert netmask_to_cidr( '128.0.0.0' ) == 1
+
+    assert netmask_to_cidr( '254.0.0.0' ) == 7
+    assert netmask_to_cidr( '255.0.0.0' ) == 8
+    assert netmask_to_cidr( '255.128.0.0' ) == 9
+
+    assert netmask_to_cidr( '255.254.0.0' ) == 15
+    assert netmask_to_cidr( '255.255.0.0' ) == 16
+    assert netmask_to_cidr( '255.255.128.0' ) == 17
+
+    assert netmask_to_cidr( '255.255.254.0' ) == 23
+    assert netmask_to_cidr( '255.255.255.0' ) == 24
+    assert netmask_to_cidr( '255.255.255.128' ) == 25
+
+    assert netmask_to_cidr( '255.255.255.254' ) == 31
+    assert netmask_to_cidr( '255.255.255.255' ) == 32
 
 '''
 Tests for parse_addr_str( addr_str: str ) -> list
