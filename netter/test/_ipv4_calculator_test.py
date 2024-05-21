@@ -1,16 +1,18 @@
+"""Tests for _ipv4_validator.py"""
+
 import pytest
-from v4._ipv4_calculator import cidr_to_str                     # Implemented
-from v4._ipv4_calculator import cidr_to_netmask                 # Implemented
-from v4._ipv4_calculator import netmask_to_cidr                 # Implemented
-from v4._ipv4_calculator import parse_addr_str                  # Update to reflect new error throws for invalid input       
-from v4._ipv4_calculator import get_subnet_class                # Implemented
+from v4._ipv4_calculator import cidr_to_str # Implemented
+from v4._ipv4_calculator import cidr_to_netmask # Implemented
+from v4._ipv4_calculator import netmask_to_cidr # Implemented
+from v4._ipv4_calculator import parse_addr_str # Implemented     
+from v4._ipv4_calculator import get_subnet_class # Implemented
 from v4._ipv4_calculator import get_num_hosts
 from v4._ipv4_calculator import get_num_subnets
 from v4._ipv4_calculator import get_first_host
 from v4._ipv4_calculator import get_last_host
 from v4._ipv4_calculator import get_subnet_info_given_mask
 from v4._ipv4_calculator import get_subnet_info_given_cidr
-from v4._ipv4_calculator import validate_subnet_mask_octet_list as validate_octet_list # Implemented
+from v4._ipv4_calculator import validate_subnet_mask_octet_list # Implemented
 
 def test_cidr_to_str():
     """Tests for cidr_to_str( cidr: int ) -> str"""
@@ -161,46 +163,46 @@ def test_validate_octet_list():
 
     # Test invalid input type
     with pytest.raises( TypeError ) as e_info:
-        validate_octet_list( 123456789 )
+        validate_subnet_mask_octet_list( 123456789 )
     with pytest.raises( TypeError ) as e_info:
-        validate_octet_list( '123456789' )
+        validate_subnet_mask_octet_list( '123456789' )
     with pytest.raises( TypeError ) as e_info:
-        validate_octet_list( 12345.67890 )
+        validate_subnet_mask_octet_list( 12345.67890 )
     with pytest.raises( TypeError ) as e_info:
-        validate_octet_list( [ 1.0, 2.0, 3.0, 4.0 ] )
+        validate_subnet_mask_octet_list( [ 1.0, 2.0, 3.0, 4.0 ] )
     with pytest.raises( TypeError ) as e_info:
-        validate_octet_list( [ '1.0', '2.0', '3.0', '4.0' ] )
+        validate_subnet_mask_octet_list( [ '1.0', '2.0', '3.0', '4.0' ] )
 
     # Test invalid list input
-    assert validate_octet_list( [ 255, 255, 255 ] ) == False
-    assert validate_octet_list( [ 255, 255, 255, 255, 255 ] ) == False
-    assert validate_octet_list( [ -255, 255, 255, 128 ] ) == False
-    assert validate_octet_list( [ 255, -255, 255, 128 ] ) == False
-    assert validate_octet_list( [ 255, 255, -255, 128 ] ) == False
-    assert validate_octet_list( [ 255, 255, 255, -128 ] ) == False
-    assert validate_octet_list( [ 256, 255, 255, 255 ] ) == False
-    assert validate_octet_list( [ 0, 255, 255, 255 ] ) == False
-    assert validate_octet_list( [ 254, 253, 252, 251 ] ) == False
-    assert validate_octet_list( [ 255, 255, 128, 254 ] ) == False
+    assert validate_subnet_mask_octet_list( [ 255, 255, 255 ] ) == False
+    assert validate_subnet_mask_octet_list( [ 255, 255, 255, 255, 255 ] ) == False
+    assert validate_subnet_mask_octet_list( [ -255, 255, 255, 128 ] ) == False
+    assert validate_subnet_mask_octet_list( [ 255, -255, 255, 128 ] ) == False
+    assert validate_subnet_mask_octet_list( [ 255, 255, -255, 128 ] ) == False
+    assert validate_subnet_mask_octet_list( [ 255, 255, 255, -128 ] ) == False
+    assert validate_subnet_mask_octet_list( [ 256, 255, 255, 255 ] ) == False
+    assert validate_subnet_mask_octet_list( [ 0, 255, 255, 255 ] ) == False
+    assert validate_subnet_mask_octet_list( [ 254, 253, 252, 251 ] ) == False
+    assert validate_subnet_mask_octet_list( [ 255, 255, 128, 254 ] ) == False
     
     # Test valid input
-    assert validate_octet_list( [ 0, 0, 0, 0 ] ) == True
-    assert validate_octet_list( [ 128, 0, 0, 0 ] ) == True
-    assert validate_octet_list( [ 192, 0, 0, 0 ] ) == True
-    assert validate_octet_list( [ 254, 0, 0, 0 ] ) == True
-    assert validate_octet_list( [ 255, 0, 0, 0 ] ) == True
-    assert validate_octet_list( [ 255, 128, 0, 0 ] ) == True
-    assert validate_octet_list( [ 255, 224, 0, 0 ] ) == True
-    assert validate_octet_list( [ 255, 254, 0, 0 ] ) == True
-    assert validate_octet_list( [ 255, 255, 0, 0 ] ) == True
-    assert validate_octet_list( [ 255, 255, 128, 0 ] ) == True
-    assert validate_octet_list( [ 255, 255, 240, 0 ] ) == True
-    assert validate_octet_list( [ 255, 255, 254, 0 ] ) == True
-    assert validate_octet_list( [ 255, 255, 255, 0 ] ) == True
-    assert validate_octet_list( [ 255, 255, 255, 128 ] ) == True
-    assert validate_octet_list( [ 255, 255, 255, 248 ] ) == True
-    assert validate_octet_list( [ 255, 255, 255, 254 ] ) == True
-    assert validate_octet_list( [ 255, 255, 255, 255 ] ) == True
+    assert validate_subnet_mask_octet_list( [ 0, 0, 0, 0 ] ) == True
+    assert validate_subnet_mask_octet_list( [ 128, 0, 0, 0 ] ) == True
+    assert validate_subnet_mask_octet_list( [ 192, 0, 0, 0 ] ) == True
+    assert validate_subnet_mask_octet_list( [ 254, 0, 0, 0 ] ) == True
+    assert validate_subnet_mask_octet_list( [ 255, 0, 0, 0 ] ) == True
+    assert validate_subnet_mask_octet_list( [ 255, 128, 0, 0 ] ) == True
+    assert validate_subnet_mask_octet_list( [ 255, 224, 0, 0 ] ) == True
+    assert validate_subnet_mask_octet_list( [ 255, 254, 0, 0 ] ) == True
+    assert validate_subnet_mask_octet_list( [ 255, 255, 0, 0 ] ) == True
+    assert validate_subnet_mask_octet_list( [ 255, 255, 128, 0 ] ) == True
+    assert validate_subnet_mask_octet_list( [ 255, 255, 240, 0 ] ) == True
+    assert validate_subnet_mask_octet_list( [ 255, 255, 254, 0 ] ) == True
+    assert validate_subnet_mask_octet_list( [ 255, 255, 255, 0 ] ) == True
+    assert validate_subnet_mask_octet_list( [ 255, 255, 255, 128 ] ) == True
+    assert validate_subnet_mask_octet_list( [ 255, 255, 255, 248 ] ) == True
+    assert validate_subnet_mask_octet_list( [ 255, 255, 255, 254 ] ) == True
+    assert validate_subnet_mask_octet_list( [ 255, 255, 255, 255 ] ) == True
 
 def test_get_subnet_class():
     """Tests for get_subnet_class( subnet_mask: list ) -> str"""

@@ -131,11 +131,11 @@ def get_subnet_info_given_mask( ipv4_str: str, subnet_mask_str: str ) -> dict:
     # Get the subnet mask octet values as an array (assumes that the address has been validated by _ipv4_validator)
     subnet_mask = parse_addr_str( subnet_mask_str )
     # Get the wildcard mask -> invert the subnet mask
-    wildcard_mask = bitwise_not( subnet_mask )
+    wildcard_mask = get_wildcard_mask( subnet_mask )
     # Get the network ID -> bitwise AND the IPv4 address and subnet mask
-    network_id = bitwise_and( ipv4, subnet_mask )
+    network_id = get_network_id( ipv4, subnet_mask )
     # Get the broadcast address -> bitwise OR the network ID and wildcard mask
-    broadcast = bitwise_or( network_id, wildcard_mask )
+    broadcast = get_broadcast_addr( network_id, wildcard_mask )
     # Get the first host address -> increment network ID by 1
     first_host = get_first_host( network_id )
     # Get the last host address -> decrement broadcast addr by 1
@@ -204,6 +204,39 @@ def get_subnet_info_given_cidr( ipv4_str: str, cidr: int ) -> dict:
     str_valid( ipv4_str )
     int_valid( cidr )
     return get_subnet_info_given_mask( ipv4_str, cidr_to_netmask( cidr ) )
+
+def get_wildcard_mask( subnet_mask: list ) -> list:
+    """
+    """
+    # Validate subnet mask
+    if not validate_subnet_mask_octet_list( subnet_mask ):
+        raise ValueError( BAD_SUBNET_MASK_ERROR.format(repr(subnet_mask)) )
+    # Get the wildcard mask by inverting the subnet mask
+    return bitwise_not( subnet_mask )
+
+def get_network_id( ipv4: list, subnet_mask: list ) -> list:
+    """
+    """
+    # Input type validation
+    list_valid( ipv4 )
+    # Ensure all list elements are integers
+    all( int_valid(oct) for oct in ipv4 )
+    # Validate subnet mask
+    if not validate_subnet_mask_octet_list( subnet_mask ):
+        raise ValueError( BAD_SUBNET_MASK_ERROR.format(repr(subnet_mask)) )
+    # Get the network ID by ANDing the IPv4 address and subnet mask
+    return bitwise_and( ipv4, subnet_mask )
+
+def get_broadcast_addr( network_id: list, wildcard_mask: list ) -> list:
+    """
+    """
+    # Input type validation
+    list_valid( network_id )
+    all( int_valid(oct) for oct in network_id )
+    list_valid( wildcard_mask )
+    all( int_valid(oct) for oct in wildcard_mask )
+    # Get the broadcast address by ORing the network ID and wildcard mask
+    return bitwise_or( network_id, wildcard_mask )
 
 def cidr_to_netmask( cidr: int ) -> str:
     """Given a valid CIDR value, returns the corresponding subnet mask as a string
