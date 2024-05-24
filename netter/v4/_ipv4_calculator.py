@@ -6,7 +6,7 @@ https://github.com/noahbenveniste/subnet-calculator
 """
 # - get_subnet_info_given_mask  TODO: test
 # - get_subnet_info_given_cidr  TODO: test
-# - cidr_to_netmask             TODO: Get rid of lookup table, just generate a 32-bit binary string with x number of left-most bits set to 1, with x=CIDR
+# - cidr_to_netmask             TODO:
 # - netmask_to_cidr             TODO:
 # - parse_addr_str              TODO: 
 # - get_first_host              TODO: test, handle edge case for /0, /31 and /32 subnets [Validation should be good, no refactoring should be necessary]
@@ -19,8 +19,9 @@ https://github.com/noahbenveniste/subnet-calculator
 
 #|#############################################################| Imports |##############################################################|#
 
-from v4._ipv4_validator import argument_type_validator as arg_valid
-from itertools          import chain
+from v4._ipv4_validator import CIDR_DICT
+from v4._ipv4_validator import argument_type_validator
+from v4._ipv4_validator import is_valid_cidr
 from numpy              import bitwise_and
 from numpy              import bitwise_or
 from numpy              import bitwise_not
@@ -28,64 +29,19 @@ from numpy              import binary_repr
 from numpy              import prod
 from re                 import split
 
-#|##################################################| CIDR to subnet mask dictionary |##################################################|#
-
-CIDR_DICT = {
-    # No subnet, i.e. any address in the 2^32 IPv4 address space TODO: Implement an edge case to handle this
-    0 : '0.0.0.0',
-    # /1 - /7 subnets (not sure how to label, just using 'class: none' for now)
-    1 : '128.0.0.0',
-    2 : '192.0.0.0',
-    3 : '224.0.0.0',
-    4 : '240.0.0.0',
-    5 : '248.0.0.0',
-    6 : '252.0.0.0',
-    7 : '254.0.0.0',
-    # Class A subnets (subnetted class A network)
-    8 : '255.0.0.0',
-    9 : '255.128.0.0',
-    10 : '255.192.0.0',
-    11 : '255.224.0.0',
-    12 : '255.240.0.0',
-    13 : '255.248.0.0',
-    14 : '255.252.0.0',
-    15 : '255.254.0.0',
-    # Class B subnets (subnetted class B network)
-    16 : '255.255.0.0',
-    17 : '255.255.128.0',
-    18 : '255.255.192.0',
-    19 : '255.255.224.0',
-    20 : '255.255.240.0',
-    21 : '255.255.248.0',
-    22 : '255.255.252.0',
-    23 : '255.255.254.0',
-    # Class C subnets (subnetted class C network)
-    24 : '255.255.255.0',
-    25 : '255.255.255.128',
-    26 : '255.255.255.192',
-    27 : '255.255.255.224',
-    28 : '255.255.255.240',
-    29 : '255.255.255.248',
-    30 : '255.255.255.252',
-    # 31-bit subnet masks are used for interfaces that act as endpoints in point-to-point links (see RFC 3021)
-    31 : '255.255.255.254',
-    # 32-bit subnet masks represent a network with a single address, such as a physical external interface
-    32 : '255.255.255.255'
-}
-
-#|#########################################################| Global constants |########################################################|#
+#|#########################################################| Global constants |#########################################################|#
 
 BAD_CIDR_ERROR = 'CIDR must be within the range [ 0, 32 ] - Given: {}'
 BAD_SUBNET_MASK_ERROR = 'Octet list must consist of four integers ranging from [0, 255], sorted in descending order - Given: {}'
 BAD_IPV4_ERROR = 'IPv4 address string must consist of four integers in range [0, 255] separated by \'.\' - Given: {}'
 
-#|################################################| Argument type validator functions |################################################|#
+#|################################################| Argument type validator functions |#################################################|#
 
-str_valid  = arg_valid( str )
-int_valid  = arg_valid( int )
-list_valid = arg_valid( list )
+ensure_type_str = argument_type_validator( str )
+ensure_type_int = argument_type_validator( int )
+ensure_type_list = argument_type_validator( list )
 
-#|#######################################################| Function definitions |######################################################|#
+#|#######################################################| Function definitions |#######################################################|#
 
 def get_subnet_info_given_mask( ipv4_str: str, subnet_mask_str: str ) -> dict:
     """Returns IPv4 subnet information given an IPv4 address and subnet mask
@@ -122,12 +78,14 @@ def get_subnet_info_given_mask( ipv4_str: str, subnet_mask_str: str ) -> dict:
         TypeError: Non-string input provided for ipv4_str or subnet_mask_str.
         ValueError: Invalid format for ipv4_str or subnet_mask_str.
     """
-    # Ensure input arguments are of valid type
-    str_valid( ipv4_str )
-    str_valid( subnet_mask_str )
-    # Validate IPv4 and subnet mask
+    # Ensure IPv4 input is a string, throw a TypeError if it is not
+    ensure_type_str( ipv4_str )
+    # Validate IPv4 address structure
     # TODO: Implement
-
+    # Ensure subnet mask input is a string, throw a TypeError if it is not
+    ensure_type_str( subnet_mask_str )
+    # Validate subnet mask structure
+    # TODO: Implement
     # Get the IPv4 octet values as an array -> parse and tokenize the input string (assumes that the address has been validated by _ipv4_validator)
     ipv4 = parse_addr_str( ipv4_str )
     # Get the subnet mask octet values as an array (assumes that the address has been validated by _ipv4_validator)
@@ -183,72 +141,56 @@ def get_subnet_info_given_cidr( ipv4_str: str, cidr: int ) -> dict:
 
     Returns:
         A dict mapping label keys to corresponding subnet information.
-        example:
-        { 
-            'network_id' : '192.168.10.0', 
-            'subnet_mask' : '255.255.255.0',
-            'wildcard_mask' : '0.0.0.255', 
-            'cidr_int' : 24,
-            'cidr_str' : '/24',
-            'subnet_class' : 'C', 
-            'first_host' : '192.168.10.1', 
-            'last_host' : '192.168.10.254', 
-            'broadcast' : '192.168.10.255',
-            'num_hosts' : 254, 
-            'num_subnets' : 1
-        }
 
     Raises:
         TypeError: Non-string input provided for ipv4_str, non-integer input provided for cidr.
         ValueError: Invalid format for ipv4_str, invalid integer value for cidr.
     """
-    # Ensure input arguments are of valid type
-    str_valid( ipv4_str )
-    int_valid( cidr )
-    # Validate IPv4 address and CIDR
+    # Ensure cidr is an integer, throw error if it is not
+    ensure_type_int( cidr )
+    # Validate that cidr value is within the correct range
+    if not is_valid_cidr( cidr ): raise ValueError( BAD_CIDR_ERROR.format(cidr) )
+    # Ensure IPv4 is a string, throw error if it is not
+    ensure_type_str( ipv4_str )
+    # Validate IPv4 address structure
     # TODO: Implement
-
     return get_subnet_info_given_mask( ipv4_str, cidr_to_netmask( cidr ) )
 
 def get_wildcard_mask( subnet_mask: list ) -> list:
     """
     """
-
-    # This function should only verify that the input list is of valid type and not bother with validating with the structure, it's redundant.
-
-    # TODO: Refactor subnet mask validation into _ipv4_validator
-    if not validate_subnet_mask_octet_list( subnet_mask ):
-        raise ValueError( BAD_SUBNET_MASK_ERROR.format(repr(subnet_mask)) )
-    
+    # Ensure input is a list
+    ensure_type_list( subnet_mask )
+    '''
+    Ensure all list elements are integers. The bool return from
+    all() is irrelevant, only using it b/c it is an easy one-liner
+    looping mechanism that allows us to call the int validator
+    function which will throw an error for any non-int elements.
+    '''
+    all( ensure_type_int(oct) for oct in subnet_mask )
     # Get the wildcard mask by inverting the subnet mask
     return bitwise_not( subnet_mask )
 
 def get_network_id( ipv4: list, subnet_mask: list ) -> list:
     """
     """
-    # Input type validation
-    list_valid( ipv4 )
-    # Ensure all list elements are integers
-    all( int_valid(oct) for oct in ipv4 )
-
-    # Just check the input type, don't validate the structure
-
-    # Validate subnet mask
-    if not validate_subnet_mask_octet_list( subnet_mask ):
-        raise ValueError( BAD_SUBNET_MASK_ERROR.format(repr(subnet_mask)) )
-    
-    # Get the network ID by ANDing the IPv4 address and subnet mask
+     # Ensure that both inputs are lists, and that both lists only contain integers
+    ensure_type_list( ipv4 )
+    all( ensure_type_int(oct) for oct in ipv4 )
+    ensure_type_list( subnet_mask )
+    all( ensure_type_list(oct) for oct in subnet_mask )
+    # Get the network ID by AND-ing the IPv4 address and subnet mask
     return bitwise_and( ipv4, subnet_mask )
 
 def get_broadcast_addr( network_id: list, wildcard_mask: list ) -> list:
     """
     """
-    # Ensure that both inputs are lists, and that both lists only contain integers.
-    list_valid( network_id )
-    all( int_valid(oct) for oct in network_id )
-    list_valid( wildcard_mask )
-    all( int_valid(oct) for oct in wildcard_mask )
-    # Get the broadcast address by ORing the network ID and wildcard mask
+    # Ensure that both inputs are lists, and that both lists only contain integers
+    ensure_type_list( network_id )
+    all( ensure_type_int(oct) for oct in network_id )
+    ensure_type_list( wildcard_mask )
+    all( ensure_type_int(oct) for oct in wildcard_mask )
+    # Get the broadcast address by OR-ing the network ID and wildcard mask
     return bitwise_or( network_id, wildcard_mask )
 
 def cidr_to_netmask( cidr: int ) -> str:
@@ -265,23 +207,26 @@ def cidr_to_netmask( cidr: int ) -> str:
         TypeError: Non-integer input is provided for cidr.
         ValueError: Invalid integer value is provided for cidr.
     """
-    # Input type validation
-    int_valid( cidr )
-
-    # Update this function to not use the CIDR dictionary and instead dynamically generate netmasks based on the size of the CIDR value
-
+    # Ensure input is an integer
+    ensure_type_int( cidr )
+    # Ensure cidr is within the correct range
+    if not is_valid_cidr( cidr ): raise ValueError( BAD_CIDR_ERROR.format(cidr) )
+    '''
+    Try to retrieve the corresponding subnet mask value using cidr as a key.
+    Because  we've already validated cidr, no errors should occur. The try/except
+    is just a sanity check.
+    '''
     try:
         return CIDR_DICT[ cidr ]
     except KeyError:
         raise ValueError( BAD_CIDR_ERROR.format(cidr) )
 
-# TODO: Deprecate
 def netmask_to_cidr( subnet_mask_str: str ) -> int:
-    """Given a valid subnet mask string, returns the corresponding CIDR value as an integer
+    """Given a valid subnet mask, returns the corresponding CIDR value as an integer
 
     Args:
-        subnet_mask_str:
-            A string representation of a valid subnet mask.
+        subnet_mask:
+            A valid string representation of an IPv4 subnet mask
 
     Returns:
         The CIDR value corresponding to the given subnet mask as an integer.
@@ -290,8 +235,8 @@ def netmask_to_cidr( subnet_mask_str: str ) -> int:
         TypeError: Non-string input provided for subnet_mask_str.
         ValueError: subnet_mask_str is not a valid subet mask.
     """
-    # Input type validation
-    str_valid( subnet_mask_str )
+    # Ensure input is a string
+    ensure_type_str( subnet_mask_str )
     # List comprehension that generates an array of integers [0, 32]
     cidr_vals = [ c for c in range (33) ]
     # Filter out CIDR values where cidr_dict[value] == subnet_mask
@@ -302,14 +247,14 @@ def netmask_to_cidr( subnet_mask_str: str ) -> int:
         return cidr
     except StopIteration:
         # If bad input was provided, need to catch error for empty iterator
-        raise ValueError( BAD_SUBNET_MASK_ERROR.format(subnet_mask_str) )                                                                  
+        raise ValueError( BAD_SUBNET_MASK_ERROR.format(subnet_mask_str) )
 
 def parse_addr_str( addr_str: str ) -> list:
     """Parses an IPv4 address/netmask for octet values, returns a list containing the integer values
 
     Args:
         addr_str:
-            A valid IPv4 address as a string.
+            A string of the format x.x.x.x, where x is any integer in the range [0,255]
 
     Returns:
         The integer octet values as a list.
@@ -318,22 +263,18 @@ def parse_addr_str( addr_str: str ) -> list:
 
     Raises:
         TypeError: If non-string input is provided for addr_str
-        ValueError: If addr_str is not a valid IPv4 address
+        ValueError: If the string contains any invalid characters
     """
-    # Input type validation
-    str_valid( addr_str )
+    # Ensure input is a string
+    ensure_type_str( addr_str )
+    # Validate IPv4 address structure (yes it's redundant, just a sanity check)
+    # TODO: Implement
     # Split the input string into four separate strings
     oct_list_str = split( '[.]', addr_str )
     try:
-        # Convert the string tokens to integers
-        oct_list_int = [ int(oct) for oct in oct_list_str ]
-        # Return the list if it has exactly 4 elements that are all [0, 255]
-        if len( oct_list_int ) == 4 and all( 0 <= oct <= 255 for oct in oct_list_int ):
-            return oct_list_int
-        # Else, throw an error                                                         
-        else:
-            raise ValueError( BAD_IPV4_ERROR.format(addr_str) )
-    # If any cast to int fails, catch and throw a ValueError                                                                  
+    # Convert the string tokens to integers
+       return [ int(oct) for oct in oct_list_str ]
+    # If any cast to int fails, catch and throw a ValueError with a descriptive error message                                                                
     except ValueError:
         raise ValueError( BAD_IPV4_ERROR.format(addr_str) )                                                                   
 
@@ -350,12 +291,12 @@ def get_first_host( net_id: list ) -> list:
     Raises:
         TypeError: Non-list input is provided for net_id, non-integer elements in net_id
     """
-    # Input type validation
-    list_valid( net_id )
+    # Ensure input is a list
+    ensure_type_list( net_id )
     # Ensure all list elements are integers
-    all( int_valid(oct) for oct in net_id )
+    all( ensure_type_int(oct) for oct in net_id )
     # Get the first host addr by incrementing the net ID by 1
-    return [ sum(x) for x in zip(net_id, [0, 0, 0, 1]) ]
+    return [ sum(x) for x in zip( net_id, [0, 0, 0, 1] ) ]
 
 def get_last_host( broadcast: list ) -> list:
     """Finds the last host address given the broadcast address
@@ -370,12 +311,12 @@ def get_last_host( broadcast: list ) -> list:
     Raises:
         TypeError: Non-list input is provided for broadcast, non-integer elements in broadcast.
     """
-    # Input type validation
-    list_valid( broadcast )
+    # Ensure input is a list
+    ensure_type_list( broadcast )
     # Ensure all list elements are integers
-    all( int_valid(oct) for oct in broadcast )
+    all( ensure_type_int(oct) for oct in broadcast )
     # Get the last host addr by decrementing the broadcast addr by 1
-    return [ sum(x) for x in zip(broadcast, [0, 0, 0, -1]) ]
+    return [ sum(x) for x in zip( broadcast, [0, 0, 0, -1] ) ]
 
 def get_subnet_class( subnet_mask: list ) -> str:
     """Given a valid subnet mask, returns the classful network type that the subnet would segment
@@ -393,8 +334,10 @@ def get_subnet_class( subnet_mask: list ) -> str:
         TypeError: Non-list input provided for subnet_mask, non-integer elements in subnet_mask.
         ValueError: subnet_mask does not represent a valid subnet mask
     """ 
-    if not validate_subnet_mask_octet_list( subnet_mask ):
-        raise ValueError( BAD_SUBNET_MASK_ERROR.format(repr(subnet_mask)) )
+    # Ensure input is a list
+    ensure_type_list( subnet_mask )
+    # Ensure all list elements are integers
+    all( ensure_type_int(oct) for oct in subnet_mask )
     if subnet_mask[0] != 255:
         return 'none'
     elif subnet_mask[1] != 255:
@@ -418,8 +361,10 @@ def get_num_hosts( subnet_mask: list ) -> int:
         TypeError: Non-list input provided for subnet_mask, non-integer elements in subnet_mask.
         ValueError: subnet_mask does not represent a valid subnet mask
     """
-    if not validate_subnet_mask_octet_list( subnet_mask ):
-        raise ValueError( BAD_SUBNET_MASK_ERROR.format(repr(subnet_mask)) )
+    # Ensure input is a list
+    ensure_type_list( subnet_mask )
+    # Ensure all list elements are integers
+    all( ensure_type_int(oct) for oct in subnet_mask )
     # Invert to get wildcard mask
     wildcard_mask = bitwise_not( subnet_mask)
     # Get each element from the wildcard_mask array and add one
@@ -443,21 +388,19 @@ def get_num_subnets( subnet_mask: list ) -> int:
         TypeError: Non-list input provided for subnet_mask, non-integer elements in subnet_mask.
         ValueError: subnet_mask does not represent a valid subnet mask
     """
-
-    # TODO: Just check that the subnet mask is a list of integers
-
-    if not validate_subnet_mask_octet_list( subnet_mask ):
-        raise ValueError( BAD_SUBNET_MASK_ERROR.format(repr(subnet_mask)) )
-    
-
+    # Ensure input is a list
+    ensure_type_list( subnet_mask )
+    # Ensure all list elements are integers
+    all( ensure_type_int(oct) for oct in subnet_mask )
+    # Loop over the octets in the subnet mask
     for oct in subnet_mask:
         # Find the "interesting octet", i.e. the first non-255 octet
         if oct != 255:
             # Convert the interesting octet to binary representation
-            bit_string = binary_repr( oct )
+            bit_str = binary_repr( oct )
             # Count the number of 1-bits
             subnet_bits = 0
-            for b in bit_string:
+            for b in bit_str:
                 if b == '1': subnet_bits += 1
             # Return the number of subnets based on the number of subnet bits
             return 2 ^ subnet_bits
@@ -480,20 +423,14 @@ def cidr_to_str( cidr: int ) -> str:
         TypeError: Non-integer input provided for cidr
         ValueError: Invalid integer input provided for cidr
     """
-    # Input type validation
-    int_valid( cidr )
+    # Ensure input is an integer
+    ensure_type_int( cidr )
+    # Ensure input is in the valid range
+    if not is_valid_cidr( cidr ): raise ValueError( BAD_CIDR_ERROR.format(cidr) )
+    # Build the output string
+    return ''.join( ['/', str(cidr) ] )
 
-    # TODO: Refactor to use CIDR validation function from _ipv4_validator. Raise error if this returns false.
-
-    # Check for valid integer input
-    if cidr >= 0 and cidr <= 32:
-        sb = []
-        sb.append( '/' )
-        sb.append( str(cidr) )
-        return ''.join( sb )
-    else:
-        raise ValueError( BAD_CIDR_ERROR.format(cidr) )
-
+'''
 # TODO: Deprecate
 def validate_subnet_mask_octet_list( subnet_mask: list ) -> bool:
     """Helper function for validating a list of integers as a subnet mask
@@ -526,7 +463,8 @@ def validate_subnet_mask_octet_list( subnet_mask: list ) -> bool:
     
     # Return True if no exception is caught
     return True
-
+'''
+'''
 def _delimit_list( _list: list, _delim: str, _freq: int ) -> list:
     """Helper function for inserting a delimiter character every f elements (specified by _freq) into an existing list
 
@@ -546,8 +484,7 @@ def _delimit_list( _list: list, _delim: str, _freq: int ) -> list:
         example:
         _delimit_list( [ 'a', 'b', 'c', 'd' ], '.', 1 ) -> [ 'a', '.', 'b', '.', 'c', '.', 'd' ]
     """
-
-    '''
+    """
     Implementation notes:
 
     itertools.chain takes a single or multiple iterables and combines them into a single iterable (e.g. *[ x, y, z ] turns this list into an iterable)
@@ -557,7 +494,7 @@ def _delimit_list( _list: list, _delim: str, _freq: int ) -> list:
         else don't append _delim
     In the cases where _freq = 1, _delim will be appended to the end of the list regardless, so an additional check is performed to remove this
     The result is then returned
-    '''
+    """
 
     list_valid( _list )
     str_valid( _delim )
@@ -572,3 +509,4 @@ def _delimit_list( _list: list, _delim: str, _freq: int ) -> list:
                 )
     if delimited[ len(delimited) - 1 ] == _delim: delimited.pop()
     return delimited
+'''
