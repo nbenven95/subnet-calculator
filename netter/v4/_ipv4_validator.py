@@ -1,13 +1,23 @@
-# TODO:
-# Validate the IPv4 address and subnet masks/CIDR
-#   
-#   - Use regex to validate IPv4 addresses by ensuring they match x.x.x.x, where x is a number from 1 - 255 inclusive
-#   - If given a subnet mask, just compare it against a list of the 32 valid subnet masks and compare
+"""
+Helper functions for validating IPv4 addresses and subnet masks.
 
-#|##################################################| CIDR to subnet mask dictionary |##################################################|#
+Author: Noah Benveniste
+https://github.com/noahbenveniste/subnet-calculator
+"""
+#|#######################################################################| Imports |########################################################################|#
+
+from re import search
+
+#|###################################################################| Global constants |###################################################################|#
+
+BAD_CIDR_ERROR = 'CIDR must be within the range [0, 32] - Value: {}'
+BAD_SUBNET_MASK_ERROR = 'Invalid subnet mask - may only consist of integers within range [0, 255] (see help for a list of valid subnet masks) - Value: {}'
+BAD_IPV4_ERROR = 'IPv4 address must consist of four integers within range [0, 255] separated by \'.\' - Value: {}'
+
+#|############################################################| CIDR to subnet mask dictionary |############################################################|#
 
 CIDR_DICT = {
-    # No subnet, i.e. any address in the 2^32 IPv4 address space (TODO: Handle this with an edge case)
+    # No subnet, i.e. any address in the 2^32 IPv4 address space
     0 : '0.0.0.0',
     # /1 - /7 subnets (not sure how to label, just using 'class: none' for now)
     1 : '128.0.0.0',
@@ -49,14 +59,45 @@ CIDR_DICT = {
     32 : '255.255.255.255'
 }
 
+#|#################################################################| Function definitions |#################################################################|#
+
 def is_valid_ipv4( ipv4_str: str ) -> bool:
+    """Function that validates the structure of a given IPv4 address
+
+    Args:
+        ipv4_str:
+            An IPv4 address as a string.
+
+    Returns:
+        True if ipv4_str represents a valid IPv4 address, False otherwise.
+
+    Raises:
+        TypeError: Non-string input provided.
     """
-    """
-    # Use regex to validate
-    return True
+    # Ensure string input
+    if not isinstance( ipv4_str, str ): raise TypeError( '\'{}\' is not a valid {}'.format(ipv4_str, repr(str)) )
+    '''
+    This regex matches a string that begins with 3 instances of a series of digits followed by a '.'
+    The digits can either be 250-255, 200-249, 100-199, or 0-99.
+    The final block also matches these digits, but does not look for a '.' at the end
+    Source: https://www.geeksforgeeks.org/python-program-to-validate-an-ip-address/#
+    '''
+    ipv4_regex = "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])[.]){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$"
+    # Check if the input string matches the regex pattern, return the result
+    return search( ipv4_regex, ipv4_str )
 
 def is_valid_subnet_mask( subnet_mask_str: str ) -> bool:
-    """
+    """Function that validates the structure of an IPv4 subnet mask
+
+    Args:
+        subnet_mask_str:
+            A string representing an IPv4 subnet mask.
+
+    Returns:
+        True if subnet_mask_str represents a valid IPv4 subnet mask, False otherwise.
+
+    Raises:
+        TypeError: Non-string input provided.
     """
     # Ensure string input
     if not isinstance( subnet_mask_str, str ): raise TypeError( '\'{}\' is not a valid {}'.format(subnet_mask_str, repr(str)) )
@@ -68,7 +109,17 @@ def is_valid_subnet_mask( subnet_mask_str: str ) -> bool:
     return False
 
 def is_valid_cidr( cidr: int ) -> bool:
-    """
+    """Function that validates CIDR values i.e. checks that the input is in the range [0, 32]
+
+    Args:
+        cidr:
+            The input integer to check.
+
+    Returns:
+        True if cidr is in the range [0, 32], False otherwise.
+
+    Raises:
+        TypeError: Non-integer input provided.
     """
     # Ensure integer input
     if not isinstance( cidr, int ): raise TypeError( '\'{}\' is not a valid {}'.format(cidr, repr(int)) )
@@ -76,21 +127,27 @@ def is_valid_cidr( cidr: int ) -> bool:
     return 0 <= cidr <= 32
 
 def argument_type_validator( t: type ):
-    '''
-    Function that returns a lambda expression that will validate input arguments of an arbitrary data type
-    e.g.
-    float_valid = argument_type_validator( float )
-    float_valid( 3.14 ) -> True
-    float_valid( 3 ) -> raise TypeError
+    """
+    Function that returns a lambda expression that will ensure that input arguments are of a specified data type
 
-    int_valid = argument_type_validator( int )
-    int_valid( 3 ) -> True
-    int_valid( 3.14 ) -> raise TypeError
-    '''
+    Args:
+        t:
+            The data type that the returned lambda expression will check for
+
+    Returns:
+        A lambda expression for validating argument data type
+        example:
+        int_checker = argument_type_validator(int)
+        int_checker(3) -> True
+        int_checker(3.0) -> TypeError
+
+    Raises:
+        TypeError: Input is not a data type
+    """
     if not isinstance( t, type ): 
         raise TypeError
     return lambda arg : True if isinstance( arg, t ) else _raise( TypeError( '\'{}\' is not a valid {}'.format(arg, repr(t)) ) )
 
 def _raise( e: TypeError ): 
-    '''Helper function that allows us to conditionally raise errors from lambda expression'''
+    """Helper function that allows us to conditionally raise errors from lambda expression"""
     raise e
