@@ -142,7 +142,17 @@ def get_subnet_info_given_cidr( ipv4_str: str, cidr: int ) -> dict:
     return get_subnet_info_given_mask( ipv4_str, cidr_to_netmask( cidr ) )
 
 def get_wildcard_mask( subnet_mask: list ) -> list:
-    """
+    """Calculates the wildcard mask for a subnet given the subnet mask
+
+    Args:
+        subnet_mask:
+            The subnet mask for the subnet as a list of integers corresponding to the four 8-bit integer octets
+
+    Returns:
+        The wildcard mask as a list of integer octets
+
+    Raises:
+        TypeError: Non-list input provided for subnet_mask, subnet_mask contains non-integer elements
     """
     # Ensure input is a list
     ensure_type_list( subnet_mask )
@@ -157,7 +167,19 @@ def get_wildcard_mask( subnet_mask: list ) -> list:
     return bitwise_not( subnet_mask )
 
 def get_network_id( ipv4: list, subnet_mask: list ) -> list:
-    """
+    """Calculates the network ID for a subnet given an arbitrary address within the subnet's address space and the subnet mask
+
+    Args:
+        ipv4:
+            An IPv4 address within the subnet's address space as a list of integer values corresponding to the four 8-bit integer octets
+        subnet_mask:
+            The subnet mask as a list of integer octet values
+
+    Returns:
+        The network ID for the subnet as a list of integer octet values
+
+    Raises:
+        TypeError: Non-list input provided for ipv4 or subnet_mask, ipv4 or subnet_mask contain non-integer elements
     """
      # Ensure that both inputs are lists, and that both lists only contain integers
     ensure_type_list( ipv4 )
@@ -168,7 +190,19 @@ def get_network_id( ipv4: list, subnet_mask: list ) -> list:
     return bitwise_and( ipv4, subnet_mask )
 
 def get_broadcast_addr( network_id: list, wildcard_mask: list ) -> list:
-    """
+    """Calculates the broadcast address for a subnet given its network ID and wildcard mask
+
+    Args:
+        network_id:
+            The network ID of the subnet as a list of integers corresponding to the four 8-bit integer octets
+        wildcard_mask:
+            The wildcard mask (i.e. the inverted subnet mask) for the subnet as a list of integer octet values
+
+    Returns:
+        The broadcast address for the subnet i.e. the last address in the address space
+
+    Raises:
+        TypeError: Non-list input provided for network_id or wildcard_mask, network_id or wildcard_mask contain non-integer elements
     """
     # Ensure that both inputs are lists, and that both lists only contain integers
     ensure_type_list( network_id )
@@ -241,7 +275,7 @@ def parse_addr_str( addr_str: str ) -> list:
         [192, 168, 10, 1]
 
     Raises:
-        TypeError: If non-string input is provided for addr_str
+        TypeError: Non-string input is provided for addr_str
     """
     # Ensure input is a string
     ensure_type_str( addr_str )
@@ -407,7 +441,7 @@ def addr_to_str( addr: list ) -> str:
         The IPv4 address or subnet mask as a string
 
     Raises:
-        TypeException: Non-list input is provided for addr, addr contains non-integer elements
+        TypeError: Non-list input is provided for addr, addr contains non-integer elements
     """
     # Ensure input is a list
     ensure_type_list( addr )
