@@ -5,6 +5,9 @@ Author: Noah Benveniste
 https://github.com/noahbenveniste/subnet-calculator
 """
 # TODO: 
+# - Finish implementing addr_to_str
+# - Handle edge cases for /0, /31, /32
+# - Finish implementing tests for ipv4 calculator and validator
 # - Look up how to generate documentation
 # - Set up a Jenkins server to automate unit testing
 # - Create a dev branch once all IPv4 functionality is tested and implemented, only merge to main when all tests pass
@@ -27,6 +30,7 @@ from numpy              import bitwise_or
 from numpy              import bitwise_not
 from numpy              import binary_repr
 from numpy              import prod
+from itertools          import chain
 from re                 import split
 
 #|##########################################################| Argument type validator functions |###########################################################|#
@@ -163,8 +167,8 @@ def get_wildcard_mask( subnet_mask: list ) -> list:
     function which will throw an error for any non-int elements.
     '''
     all( ensure_type_int(oct) for oct in subnet_mask )
-    # Get the wildcard mask by inverting the subnet mask
-    return bitwise_not( subnet_mask )
+    # Get the wildcard mask by inverting the subnet mask - need to cast back from numpy data types
+    return [ int(oct) for oct in list( bitwise_not( subnet_mask ) ) ] 
 
 def get_network_id( ipv4: list, subnet_mask: list ) -> list:
     """Calculates the network ID for a subnet given an arbitrary address within the subnet's address space and the subnet mask
@@ -185,9 +189,9 @@ def get_network_id( ipv4: list, subnet_mask: list ) -> list:
     ensure_type_list( ipv4 )
     all( ensure_type_int(oct) for oct in ipv4 )
     ensure_type_list( subnet_mask )
-    all( ensure_type_list(oct) for oct in subnet_mask )
-    # Get the network ID by AND-ing the IPv4 address and subnet mask
-    return bitwise_and( ipv4, subnet_mask )
+    all( ensure_type_int(oct) for oct in subnet_mask )
+    # Get the network ID by AND-ing the IPv4 address and subnet mask - need to cast back from numpy data types
+    return [ int(oct) for oct  in list ( bitwise_and( ipv4, subnet_mask ) ) ]
 
 def get_broadcast_addr( network_id: list, wildcard_mask: list ) -> list:
     """Calculates the broadcast address for a subnet given its network ID and wildcard mask
@@ -209,8 +213,8 @@ def get_broadcast_addr( network_id: list, wildcard_mask: list ) -> list:
     all( ensure_type_int(oct) for oct in network_id )
     ensure_type_list( wildcard_mask )
     all( ensure_type_int(oct) for oct in wildcard_mask )
-    # Get the broadcast address by OR-ing the network ID and wildcard mask
-    return bitwise_or( network_id, wildcard_mask )
+    # Get the broadcast address by OR-ing the network ID and wildcard mask - need to cast back from numpy data types
+    return [ int(oct) for oct in list( bitwise_or( network_id, wildcard_mask ) ) ]
 
 def cidr_to_netmask( cidr: int ) -> str:
     """Given a valid CIDR value, returns the corresponding subnet mask as a string
@@ -370,7 +374,7 @@ def get_num_hosts( subnet_mask: list ) -> int:
     # Ensure all list elements are integers
     all( ensure_type_int(oct) for oct in subnet_mask )
     # Invert to get wildcard mask
-    wildcard_mask = bitwise_not( subnet_mask)
+    wildcard_mask = list( bitwise_not( subnet_mask) )
     # Get each element from the wildcard_mask array and add one
     wild_plus_1 = [ w + 1 for w in wildcard_mask ]
     # Multiply the values together to get the total number of addresses
@@ -447,4 +451,32 @@ def addr_to_str( addr: list ) -> str:
     ensure_type_list( addr )
     # Ensure all list elements are integers
     all( ensure_type_int(oct) for oct in addr )
-    # Build output string TODO: implement
+    # Convert the elements in addr to strings
+    oct_str_list = [ str(oct) for oct in addr ]
+    return ''.join(_delimit_list( oct_str_list, '.', 1 ))
+
+def _delimit_list( _list: list, _delim: str, _freq: int ) -> list:
+    """Helper function for inserting a delimiter character every f elements (specified by _freq) into an existing list
+    
+    Source: https://www.geeksforgeeks.org/python-insert-after-every-nth-element-in-a-list/
+
+    Args:
+        _list:
+            The list to insert a delimiter into
+        _delim:
+            The delimter character/string
+        _freq:
+            How often to insert the delimiter, indicated by the length of a substring within _list
+    
+    Returns:
+        A delimited list
+        example: 
+        _delimit_list( [ 'a', 'b', 'c', 'd' ], '.', 1 ) -> [ 'a', '.', 'b', '.', 'c', '.', 'd' ]
+    """
+    delimited = list( chain( *[ _list[i : i+_freq] + [_delim] 
+                               if len(_list[i : i+_freq]) == _freq
+                               else _list[i : i+_freq]
+                               for i in range(0, len(_list), _freq) ] ) )
+    # Remove extra delimiter character from end of list (can happen when _freq == 1)
+    if delimited[ len(delimited) - 1 ] == _delim: delimited.pop()
+    return delimited
