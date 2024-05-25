@@ -37,22 +37,61 @@ def test_parse_addr_str():
 
 def test_get_network_id():
     """Tests for get_network_id"""
-    assert True
+    ### Class (none) ###
+    assert get_network_id( [0,0,0,0], [0,0,0,0] ) == [0,0,0,0] # /0
+    # Need to handle /0 as an edge case to only allow 0.0.0.0 0.0.0.0 and output information regarding default routes, possibly link to documentation
+    assert get_network_id( [10,1,5,7], [0,0,0,0] ) == [0,0,0,0] # /0 semantically incorrect, mathematically correct
+    assert get_network_id( [178,254,16,226], [128,0,0,0] ) == [128,0,0,0] # /1
+    assert get_network_id( [70,41,146,175], [224,0,0,0] ) == [64,0,0,0] # /3
+    assert get_network_id( [69,255,255,254], [254,0,0,0] ) == [68,0,0,0] # /7
+    ### Class A ###
+    assert get_network_id( [51,128,200,1], [255,0,0,0] ) == [51,0,0,0] # /8
+    assert get_network_id( [231,217,0,1], [255,240,0,0] ) == [231,208,0,0] # /12
+    assert get_network_id( [100,75,100,100], [255,254,0,0] ) == [100,74,0,0] # /15
+    ### Class B ###
+    assert get_network_id( [99,99,99,99], [255,255,0,0] ) == [99,99,0,0] # /16
+    assert get_network_id( [101,102,103,104], [255,255,240,0] ) == [101,102,96,0] # /20
+    assert get_network_id( [199,17,97,201], [199,17,96,0] ) # /23
+    ### Class C ### 
+    assert get_network_id( [192,168,10,1], [255,255,255,0] ) == [192,168,10,0] # /24
+    assert get_network_id( [172,31,16,24], [255,255,255,192] ) == [172,31,16,0] # /26
+    assert get_network_id( [10,0,0,9], [255,255,255,252] ) == [10,0,0,8] # /30
+    # Should handle with edge case -> 2 addresses, 0 usable hosts (first address is network ID, second address is broadcast) -> provide link to documentation
+    assert get_network_id( [1,0,0,5], [255,255,255,254] ) == [1,0,0,4] # /31
+    # Should handle with edge case -> 1 address, 0 usable hosts, network ID = broadcast -> look into documentation for use cases
+    assert get_network_id( [1,1,1,1], [255,255,255,255] ) == [1,1,1,1] # /32
 
 def test_get_wildcard_mask():
     """Tests for get_wildcard_mask"""
+    ### Class (none) ###
+    ### Class A ###
+    ### Class B ###
+    ### Class C ###
     assert True
 
 def test_get_broadcast_addr():
     """Tests for get_broadcast_addr"""
+    ### Class (none) ###
+    ### Class A ###
+    ### Class B ###
+    ### Class C ###
     assert True
 
 def test_get_num_hosts():
     """Tests for get_num_hosts"""
+    ### Class (none) ###
+    assert get_num_hosts( [128,0,0,0] ) == 2147483646
+    ### Class A ###
+    ### Class B ###
+    ### Class C ###
     assert True
 
 def test_get_num_subnets():
     """Tests for get_num_subnets"""
+    ### Class (none) ###
+    ### Class A ###
+    ### Class B ###
+    ### Class C ###
     assert True
 
 def test_get_subnet_class():
@@ -159,19 +198,24 @@ def test_cidr_to_str():
     assert cidr_to_str( 31 ) == '/31'
     assert cidr_to_str( 32 ) == '/32'
 
+
 def test_get_subnet_info_given_mask():
+
+    # Currently failing: wildcard mask, broadcast (due to wildcard), last host (due to wildcard), number of hosts (due to wildcard), and number of subnets (separate issue possibly).
+    # Wildcard issue seems to be due to unexpected behavior from bitwise_not from numpy. e.g. 255.255.255.0 should be 0.0.0.255, not -256.-256.-256.-1
+
     """Tests for get_subnet_info_given_mask"""
-    expected = {'network_id':'192.168.10.0','subnet_mask':'255.255.255.0','wildcard_mask':'0.0.0.255','cidr_int':24,'cidr_str':'/24','subnet_class':'C','first_host':'192.168.10.1','last_host':'192.168.10.254','broadcast':'192.168.10.255','num_hosts':254,'num_subnets':1}
-    assert get_subnet_info_given_mask( '192.168.10.4', '255.255.255.0' ) == expected
-    ### Test valid input ###
-    # Class: none
-    #expected = {'network_id':'128.0.0.0','subnet_mask':'128.0.0.0','wildcard_mask':'127.255.255.255','cidr_int':1,'cidr_str':'/1','subnet_class':'none','first_host':'128.0.0.1','last_host':'255.255.255.254','broadcast':'255.255.255.255','num_hosts':2147483646,'num_subnets':2}
-    #assert get_subnet_info_given_mask( '254.172.75.42', '128.0.0.0' ) == expected
+    ##### Test valid input #####
+    ### Class (none) ###
+    expected = {'ipv4':'254.172.75.42','network_id':'128.0.0.0','subnet_mask':'128.0.0.0','wildcard_mask':'127.255.255.255','cidr_int':1,'cidr_str':'/1','subnet_class':'none','first_host':'128.0.0.1','last_host':'255.255.255.254','broadcast':'255.255.255.255','num_hosts':2147483646,'num_subnets':2}
+    assert get_subnet_info_given_mask( '254.172.75.42', '128.0.0.0' ) == expected
     #expected = {'network_id':'','subnet_mask':'','wildcard_mask':'','cidr_int':'','cidr_str':'','subnet_class':'','first_host':'','last_host':'','broadcast':'','num_hosts' :'','num_subnets':''}
     #assert get_subnet_info_given_mask( '203.99.175.27', '254.0.0.0' ) == expected
-    # Class: A
-    # Class: B
-    # Class: C
+    ### Class A ###
+    ### Class B ###
+    ### Class C ###
+    expected = {'ipv4':'192.168.10.4','network_id':'192.168.10.0','subnet_mask':'255.255.255.0','wildcard_mask':'0.0.0.255','cidr_int':24,'cidr_str':'/24','subnet_class':'C','first_host':'192.168.10.1','last_host':'192.168.10.254','broadcast':'192.168.10.255','num_hosts':254,'num_subnets':1}
+    assert get_subnet_info_given_mask( '192.168.10.4', '255.255.255.0' ) == expected
     assert True
 
 

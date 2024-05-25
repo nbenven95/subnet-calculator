@@ -30,14 +30,17 @@ from numpy              import bitwise_or
 from numpy              import bitwise_not
 from numpy              import binary_repr
 from numpy              import prod
+from numpy              import array
+from numpy              import uint8
 from itertools          import chain
 from re                 import split
 
 #|##########################################################| Argument type validator functions |###########################################################|#
 
-ensure_type_str = argument_type_validator( str )
-ensure_type_int = argument_type_validator( int )
-ensure_type_list = argument_type_validator( list )
+# Each of these calls returns a lambda expression that will check if an input argument matches the specified data type
+ensure_dtype_str = argument_type_validator( str )
+ensure_dtype_int = argument_type_validator( int )
+ensure_dtype_list = argument_type_validator( list )
 
 #|#################################################################| Function definitions |#################################################################|#
 
@@ -59,6 +62,7 @@ def get_subnet_info_given_mask( ipv4_str: str, subnet_mask_str: str ) -> dict:
         A dict mapping label keys to corresponding subnet information.
         example:
         { 
+            'ipv4' : '192.168.10.2',
             'network_id' : '192.168.10.0', 
             'subnet_mask' : '255.255.255.0',
             'wildcard_mask' : '0.0.0.255', 
@@ -76,9 +80,9 @@ def get_subnet_info_given_mask( ipv4_str: str, subnet_mask_str: str ) -> dict:
         TypeError: Non-string input provided for ipv4_str or subnet_mask_str.
     """
     # Ensure IPv4 input is a string, throw a TypeError if it is not
-    ensure_type_str( ipv4_str )
+    ensure_dtype_str( ipv4_str )
     # Ensure subnet mask input is a string, throw a TypeError if it is not
-    ensure_type_str( subnet_mask_str )
+    ensure_dtype_str( subnet_mask_str )
     # Get the IPv4 octet values as an array -> parse and tokenize the input string
     ipv4 = parse_addr_str( ipv4_str )
     # Get the subnet mask octet values as an array
@@ -96,7 +100,7 @@ def get_subnet_info_given_mask( ipv4_str: str, subnet_mask_str: str ) -> dict:
     # Get the subnet class -> examine the subnet mask
     subnet_class = get_subnet_class( subnet_mask )
     # Get the number of usable host addresses -> multiply wildcard mask octets (+1 to each), subtract 2 from total
-    num_hosts = get_num_hosts( wildcard_mask )
+    num_hosts = get_num_hosts( subnet_mask )
     # Get the number of subnets per network of the given class -> 2^(subnet_bits)
     num_subnets = get_num_subnets( subnet_mask )
     # Get the CIDR integer value from the subnet mask
@@ -104,7 +108,8 @@ def get_subnet_info_given_mask( ipv4_str: str, subnet_mask_str: str ) -> dict:
     # Get the CIDR string representation
     cidr_str = cidr_to_str( cidr_int )
 
-    return { 
+    return {
+        'ipv4' : ipv4_str,
         'network_id' : addr_to_str( network_id ), 
         'subnet_mask' : subnet_mask_str,
         'wildcard_mask' : addr_to_str( wildcard_mask ), 
@@ -139,9 +144,9 @@ def get_subnet_info_given_cidr( ipv4_str: str, cidr: int ) -> dict:
         TypeError: Non-string input provided for ipv4_str, non-integer input provided for cidr.
     """
     # Ensure cidr is an integer, throw TypeError if it is not
-    ensure_type_int( cidr )
+    ensure_dtype_int( cidr )
     # Ensure IPv4 is a string, throw TypeError if it is not
-    ensure_type_str( ipv4_str )    
+    ensure_dtype_str( ipv4_str )    
     # Convert the CIDR value to a subnet mask and call get_subnet_info_given_mask
     return get_subnet_info_given_mask( ipv4_str, cidr_to_netmask( cidr ) )
 
@@ -159,16 +164,18 @@ def get_wildcard_mask( subnet_mask: list ) -> list:
         TypeError: Non-list input provided for subnet_mask, subnet_mask contains non-integer elements
     """
     # Ensure input is a list
-    ensure_type_list( subnet_mask )
+    ensure_dtype_list( subnet_mask )
     '''
     Ensure all list elements are integers. The bool return from
     all() is irrelevant, only using it b/c it is an easy one-liner
     looping mechanism that allows us to call the int validator
     function which will throw an error for any non-int elements.
     '''
-    all( ensure_type_int(oct) for oct in subnet_mask )
-    # Get the wildcard mask by inverting the subnet mask - need to cast back from numpy data types
-    return [ int(oct) for oct in list( bitwise_not( subnet_mask ) ) ] 
+    all( ensure_dtype_int(oct) for oct in subnet_mask )
+    # Cast to a numpy.array with datatype uint8 to prevent negative integer values being calculated
+    np_subnet_mask = array( subnet_mask, dtype=uint8 )
+    # Get the wildcard mask by inverting the subnet mask, cast back to integer list
+    return [ int(oct) for oct in list( bitwise_not( np_subnet_mask ) ) ] 
 
 def get_network_id( ipv4: list, subnet_mask: list ) -> list:
     """Calculates the network ID for a subnet given an arbitrary address within the subnet's address space and the subnet mask
@@ -186,12 +193,15 @@ def get_network_id( ipv4: list, subnet_mask: list ) -> list:
         TypeError: Non-list input provided for ipv4 or subnet_mask, ipv4 or subnet_mask contain non-integer elements
     """
      # Ensure that both inputs are lists, and that both lists only contain integers
-    ensure_type_list( ipv4 )
-    all( ensure_type_int(oct) for oct in ipv4 )
-    ensure_type_list( subnet_mask )
-    all( ensure_type_int(oct) for oct in subnet_mask )
-    # Get the network ID by AND-ing the IPv4 address and subnet mask - need to cast back from numpy data types
-    return [ int(oct) for oct  in list ( bitwise_and( ipv4, subnet_mask ) ) ]
+    ensure_dtype_list( ipv4 )
+    all( ensure_dtype_int(oct) for oct in ipv4 )
+    ensure_dtype_list( subnet_mask )
+    all( ensure_dtype_int(oct) for oct in subnet_mask )
+    # Cast ipv4 and subnet_mask to numpy.array with data type uint8
+    np_ipv4 = array( ipv4, dtype=uint8 )
+    np_subnet_mask = array( subnet_mask, dtype=uint8 )
+    # Get the network ID by AND-ing the IPv4 address and subnet mask, cast back to integer list
+    return [ int(oct) for oct  in list ( bitwise_and( np_ipv4, np_subnet_mask ) ) ]
 
 def get_broadcast_addr( network_id: list, wildcard_mask: list ) -> list:
     """Calculates the broadcast address for a subnet given its network ID and wildcard mask
@@ -209,12 +219,15 @@ def get_broadcast_addr( network_id: list, wildcard_mask: list ) -> list:
         TypeError: Non-list input provided for network_id or wildcard_mask, network_id or wildcard_mask contain non-integer elements
     """
     # Ensure that both inputs are lists, and that both lists only contain integers
-    ensure_type_list( network_id )
-    all( ensure_type_int(oct) for oct in network_id )
-    ensure_type_list( wildcard_mask )
-    all( ensure_type_int(oct) for oct in wildcard_mask )
-    # Get the broadcast address by OR-ing the network ID and wildcard mask - need to cast back from numpy data types
-    return [ int(oct) for oct in list( bitwise_or( network_id, wildcard_mask ) ) ]
+    ensure_dtype_list( network_id )
+    all( ensure_dtype_int(oct) for oct in network_id )
+    ensure_dtype_list( wildcard_mask )
+    all( ensure_dtype_int(oct) for oct in wildcard_mask )
+    # Cast network_id and wildcard_mask to numpy.array with data type uint8
+    np_network_id = array( network_id, dtype=uint8 )
+    np_wildcard_mask = array( wildcard_mask, dtype=uint8 )
+    # Get the broadcast address by OR-ing the network ID and wildcard mask, cast back to integer list
+    return [ int(oct) for oct in list( bitwise_or( np_network_id, np_wildcard_mask ) ) ]
 
 def cidr_to_netmask( cidr: int ) -> str:
     """Given a valid CIDR value, returns the corresponding subnet mask as a string
@@ -231,7 +244,7 @@ def cidr_to_netmask( cidr: int ) -> str:
         ValueError: Invalid integer value is provided for cidr.
     """
     # Ensure input is an integer
-    ensure_type_int( cidr )
+    ensure_dtype_int( cidr )
     # Return the value corresponding to the key cidr
     try:
         return CIDR_DICT[ cidr ]
@@ -253,15 +266,14 @@ def netmask_to_cidr( subnet_mask_str: str ) -> int:
         ValueError: subnet_mask_str is not a valid subnet mask.
     """
     # Ensure input is a string
-    ensure_type_str( subnet_mask_str )
+    ensure_dtype_str( subnet_mask_str )
     # List comprehension that generates an array of integers [0, 32]
     cidr_vals = [ c for c in range (33) ]
-    # Filter out CIDR values where cidr_dict[value] == subnet_mask
-    key_iterator = filter( lambda k: CIDR_DICT[ k ] == subnet_mask_str, cidr_vals )
+    # Loop over range [0,32], filter out CIDR values where cidr_dict[value] == subnet_mask
+    cidr_iterator = filter( lambda cidr: CIDR_DICT[ cidr ] == subnet_mask_str, cidr_vals )
     try:
         # Only one CIDR should match subnet_mask, get it and return                                                                    
-        cidr = next( key_iterator )
-        return cidr
+        return next( cidr_iterator )
     except StopIteration:
         # If bad input was provided, need to catch error for empty iterator
         raise ValueError( BAD_SUBNET_MASK_ERROR.format(subnet_mask_str) )
@@ -282,7 +294,7 @@ def parse_addr_str( addr_str: str ) -> list:
         TypeError: Non-string input is provided for addr_str
     """
     # Ensure input is a string
-    ensure_type_str( addr_str )
+    ensure_dtype_str( addr_str )
     # Split the input string into four separate strings
     oct_list_str = split( '[.]', addr_str )
     # Convert the string tokens to integers - don't need try/except b/c the string is already validated
@@ -302,9 +314,9 @@ def get_first_host( net_id: list ) -> list:
         TypeError: Non-list input is provided for net_id, non-integer elements in net_id
     """
     # Ensure input is a list
-    ensure_type_list( net_id )
+    ensure_dtype_list( net_id )
     # Ensure all list elements are integers
-    all( ensure_type_int(oct) for oct in net_id )
+    all( ensure_dtype_int(oct) for oct in net_id )
     # Get the first host addr by incrementing the net ID by 1
     return [ sum(x) for x in zip( net_id, [0, 0, 0, 1] ) ]
 
@@ -322,9 +334,9 @@ def get_last_host( broadcast: list ) -> list:
         TypeError: Non-list input is provided for broadcast, non-integer elements in broadcast.
     """
     # Ensure input is a list
-    ensure_type_list( broadcast )
+    ensure_dtype_list( broadcast )
     # Ensure all list elements are integers
-    all( ensure_type_int(oct) for oct in broadcast )
+    all( ensure_dtype_int(oct) for oct in broadcast )
     # Get the last host addr by decrementing the broadcast addr by 1
     return [ sum(x) for x in zip( broadcast, [0, 0, 0, -1] ) ]
 
@@ -344,9 +356,10 @@ def get_subnet_class( subnet_mask: list ) -> str:
         TypeError: Non-list input provided for subnet_mask, non-integer elements in subnet_mask.
     """ 
     # Ensure input is a list
-    ensure_type_list( subnet_mask )
+    ensure_dtype_list( subnet_mask )
     # Ensure all list elements are integers
-    all( ensure_type_int(oct) for oct in subnet_mask )
+    all( ensure_dtype_int(oct) for oct in subnet_mask )
+    # Determine the subnet class based on the interesting octet, i.e. the right-most non-255 octet
     if subnet_mask[0] != 255:
         return 'none'
     elif subnet_mask[1] != 255:
@@ -364,17 +377,13 @@ def get_num_hosts( subnet_mask: list ) -> int:
             A list representing a subnet mask containing four integers representing the four 8-bit integer octets.
     
     Returns:
-        The number of host addresses for the subnet (i.e. the total number of addresses minus two for the network ID and broadcast address)
+        The number of host addresses for the subnet (i.e. the total number of addresses, minus two for the network ID and broadcast address).
 
     Throws:
         TypeError: Non-list input provided for subnet_mask, non-integer elements in subnet_mask.
     """
-    # Ensure input is a list
-    ensure_type_list( subnet_mask )
-    # Ensure all list elements are integers
-    all( ensure_type_int(oct) for oct in subnet_mask )
-    # Invert to get wildcard mask
-    wildcard_mask = list( bitwise_not( subnet_mask) )
+    # Call get_wildcard_mask to convert the subnet mask to a wildcard
+    wildcard_mask = get_wildcard_mask( subnet_mask )
     # Get each element from the wildcard_mask array and add one
     wild_plus_1 = [ w + 1 for w in wildcard_mask ]
     # Multiply the values together to get the total number of addresses
@@ -396,9 +405,9 @@ def get_num_subnets( subnet_mask: list ) -> int:
         TypeError: Non-list input provided for subnet_mask, non-integer elements in subnet_mask.
     """
     # Ensure input is a list
-    ensure_type_list( subnet_mask )
+    ensure_dtype_list( subnet_mask )
     # Ensure all list elements are integers
-    all( ensure_type_int(oct) for oct in subnet_mask )
+    all( ensure_dtype_int(oct) for oct in subnet_mask )
     # Loop over the octets in the subnet mask
     for oct in subnet_mask:
         # Find the "interesting octet", i.e. the first non-255 octet
@@ -410,7 +419,7 @@ def get_num_subnets( subnet_mask: list ) -> int:
             for b in bit_str:
                 if b == '1': subnet_bits += 1
             # Return the number of subnets based on the number of subnet bits
-            return 2 ^ subnet_bits
+            return 2**subnet_bits
     # Should only reach this point if 255.255.255.255 is passed -> network with only 1 host, 256 1-host subnets
     return 256
 
@@ -430,7 +439,7 @@ def cidr_to_str( cidr: int ) -> str:
         TypeError: Non-integer input provided for cidr
     """
     # Ensure input is an integer
-    ensure_type_int( cidr )
+    ensure_dtype_int( cidr )
     # Build the output string
     return ''.join( ['/', str(cidr) ] )
 
@@ -448,9 +457,9 @@ def addr_to_str( addr: list ) -> str:
         TypeError: Non-list input is provided for addr, addr contains non-integer elements
     """
     # Ensure input is a list
-    ensure_type_list( addr )
+    ensure_dtype_list( addr )
     # Ensure all list elements are integers
-    all( ensure_type_int(oct) for oct in addr )
+    all( ensure_dtype_int(oct) for oct in addr )
     # Convert the elements in addr to strings
     oct_str_list = [ str(oct) for oct in addr ]
     return ''.join(_delimit_list( oct_str_list, '.', 1 ))
