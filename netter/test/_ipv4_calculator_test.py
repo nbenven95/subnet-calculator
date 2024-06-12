@@ -12,8 +12,8 @@ from v4.ipv4_calculator import get_last_host
 from v4.ipv4_calculator import netmask_to_cidr
 from v4.ipv4_calculator import cidr_to_netmask
 from v4.ipv4_calculator import cidr_to_str
-from v4.ipv4_calculator import get_subnet_info_given_mask
-from v4.ipv4_calculator import get_subnet_info_given_cidr
+from v4.ipv4_calculator import get_ipv4_subnet_info_given_mask
+from v4.ipv4_calculator import get_ipv4_subnet_info_given_cidr
 import pytest
 
 #|#################################################################| Function definitions |#################################################################|#
@@ -206,14 +206,14 @@ def test_get_subnet_info_given_mask():
     ##### Test valid input #####
     ### Class (none) ###
     expected = {'ipv4':'254.172.75.42','network_id':'128.0.0.0','subnet_mask':'128.0.0.0','wildcard_mask':'127.255.255.255','cidr_int':1,'cidr_str':'/1','subnet_class':'none','first_host':'128.0.0.1','last_host':'255.255.255.254','broadcast':'255.255.255.255','num_hosts':2147483646,'num_subnets':2}
-    assert get_subnet_info_given_mask( '254.172.75.42', '128.0.0.0' ) == expected
+    assert get_ipv4_subnet_info_given_mask( '254.172.75.42', '128.0.0.0' ) == expected
     #expected = {'network_id':'','subnet_mask':'','wildcard_mask':'','cidr_int':'','cidr_str':'','subnet_class':'','first_host':'','last_host':'','broadcast':'','num_hosts' :'','num_subnets':''}
     #assert get_subnet_info_given_mask( '203.99.175.27', '254.0.0.0' ) == expected
     ### Class A ###
     ### Class B ###
     ### Class C ###
     expected = {'ipv4':'192.168.10.4','network_id':'192.168.10.0','subnet_mask':'255.255.255.0','wildcard_mask':'0.0.0.255','cidr_int':24,'cidr_str':'/24','subnet_class':'C','first_host':'192.168.10.1','last_host':'192.168.10.254','broadcast':'192.168.10.255','num_hosts':254,'num_subnets':1}
-    assert get_subnet_info_given_mask( '192.168.10.4', '255.255.255.0' ) == expected
+    assert get_ipv4_subnet_info_given_mask( '192.168.10.4', '255.255.255.0' ) == expected
     assert True
 
 

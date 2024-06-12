@@ -42,7 +42,7 @@ ensure_dtype_list = argument_type_validator( list )
 
 #|#################################################################| Function definitions |#################################################################|#
 
-def get_subnet_info_given_mask( ipv4_str: str, subnet_mask_str: str ) -> dict:
+def get_ipv4_subnet_info_given_mask( ipv4_str: str, subnet_mask_str: str ) -> dict:
     """Returns IPv4 subnet information given an IPv4 address and subnet mask
 
     Given an arbitrary valid IPv4 address and subnet mask, calculates and returns
@@ -121,7 +121,7 @@ def get_subnet_info_given_mask( ipv4_str: str, subnet_mask_str: str ) -> dict:
         'num_subnets' : num_subnets 
     }
 
-def get_subnet_info_given_cidr( ipv4_str: str, cidr: int ) -> dict:
+def get_ipv4_subnet_info_given_cidr( ipv4_str: str, cidr: int ) -> dict:
     """Returns IPv4 subnet information given an IPv4 address and a CIDR value
 
     Given an arbitrary valid IPv4 address and CIDR, calculates and returns
@@ -146,7 +146,7 @@ def get_subnet_info_given_cidr( ipv4_str: str, cidr: int ) -> dict:
     # Ensure IPv4 is a string, throw TypeError if it is not
     ensure_dtype_str( ipv4_str )    
     # Convert the CIDR value to a subnet mask and call get_subnet_info_given_mask
-    return get_subnet_info_given_mask( ipv4_str, cidr_to_netmask( cidr ) )
+    return get_ipv4_subnet_info_given_mask( ipv4_str, cidr_to_netmask( cidr ) )
 
 def get_wildcard_mask( subnet_mask: list ) -> list:
     """Calculates the wildcard mask for a subnet given the subnet mask

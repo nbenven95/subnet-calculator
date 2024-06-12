@@ -6,7 +6,6 @@ IPv6 regex pattern courtesy of https://gist.github.com/dfee/6ed3a4b05cfe7a6faf40
 Author: Noah Benveniste
 https://github.com/noahbenveniste/subnet-calculator
 """
-
 from re import search
 
 #|##################################################################| IPv6 regex patterns |##################################################################|#
@@ -17,11 +16,11 @@ IPV4_SEG  = r'(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9])'
 IPV4_ADDR = r'(?:(?:' + IPV4_SEG + r'\.){3,3}' + IPV4_SEG + r')'
 # IPv6 segment pattern
 IPV6_SEG  = r'(?:(?:[0-9a-fA-F]){1,4})'
-# IPv6 GRP length pattern (fixed to end of address)
-IPV6_PREFIX = r'((/6[0-4])|(/[1-5]?[0-9]))?'                             # First group checks 60-64, second checks 10-59 and 0-9
+# IPv6 GRP length pattern (fixed to end of address) - up to 128 bits
+IPV6_PREFIX = r'((/1[0-2][0-8])|(/[0-9]?[0-9]))?'                         # First group checks 100-128, second checks 10-99 and 0-9
 # IPv6 address type groups
 IPV6_GROUPS = (
-r'(?:' + IPV6_SEG + r':){7,7}' + IPV6_SEG + IPV6_PREFIX,                  # 1:2:3:4:5:6:7:8[/0-64]
+r'(?:' + IPV6_SEG + r':){7,7}' + IPV6_SEG + IPV6_PREFIX,                  # 1:2:3:4:5:6:7:8[/0-128]
 r'(?:' + IPV6_SEG + r':){1,7}:' + IPV6_PREFIX,                            # 1::                                 1:2:3:4:5:6:7::
 r'(?:' + IPV6_SEG + r':){1,6}:' + IPV6_SEG + IPV6_PREFIX,                 # 1::8               1:2:3:4:5:6::8   1:2:3:4:5:6::8
 r'(?:' + IPV6_SEG + r':){1,5}(?::' + IPV6_SEG + r'){1,2}' + IPV6_PREFIX,  # 1::7:8             1:2:3:4:5::7:8   1:2:3:4:5::8
@@ -67,10 +66,14 @@ def is_valid_ipv6( ipv6_str: str ) -> bool:
 def is_valid_grp_len( ipv6_str: str) -> bool:
     """
     Function that checks a valid IPv6 address string for a global routing prefix length at the end of the address.
-    
+
     This function assumes that the address string is a valid IPv6 address. It only checks that the the string contains
-    a valid GRP length as a substring at the end of the string.
-    e.g. ::/64
+    a valid GRP length as a substring at the end of the string. It does not validate that the GRP length is correct
+    for the class of IPv6 address (e.g. that link-local addresses are /10).
+
+    example:
+    is_valid_grp_len( '::/128' ) -> True
+    is_valid_grp_len( '::/129' ) -> False
 
     Args:
         ipv6_str:
