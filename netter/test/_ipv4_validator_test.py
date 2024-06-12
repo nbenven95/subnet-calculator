@@ -1,10 +1,8 @@
 """Tests for _ipv4_validator.py"""
 
-#|#############################################################| Imports |##############################################################|#
-
-from v4._ipv4_validator import is_valid_subnet_mask
-from v4._ipv4_validator import is_valid_ipv4
-from v4._ipv4_validator import is_valid_cidr
+from v4.ipv4_validator import is_valid_subnet_mask
+from v4.ipv4_validator import is_valid_ipv4
+from v4.ipv4_validator import is_valid_cidr
 import pytest
 
 #|#######################################################| Function definitions |#######################################################|#

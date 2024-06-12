@@ -12,11 +12,16 @@
 #   - Given a valid VLSM configuration, display ranges of used and unused addresses, % unused address space, how optimal the configuration is, etc.
 #   - Given a valid, non-optimal VLSM configuration, suggest an optimized alternative
 
+import v4.ipv4_validator
+import v4.ipv4_calculator
+import v6.ipv6_validator
+import v6.ipv6_calculator
+
 from argparse import ArgumentParser
 from argparse import ArgumentTypeError
 
-# import ipv4_calculator
-# import ipv4_validator
+
+
 
 # validate_ipv4( ipv4_string ) <- call using argparse type field
 # validate_netmask( subnetmask_string ) <- call using argparse type field

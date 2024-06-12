@@ -19,12 +19,10 @@ https://github.com/noahbenveniste/subnet-calculator
 # - get_num_hosts               TODO: test, handle edge case for /0, /31 and /32 subnets
 # - get_num_subnets             TODO: test, handle edge case for /0, /31 and /32 subnets
 
-#|#######################################################################| Imports |########################################################################|#
-
-from v4._ipv4_validator import argument_type_validator
-from v4._ipv4_validator import BAD_SUBNET_MASK_ERROR
-from v4._ipv4_validator import BAD_CIDR_ERROR
-from v4._ipv4_validator import CIDR_DICT
+from v4.ipv4_validator import argument_type_validator
+from v4.ipv4_validator import BAD_SUBNET_MASK_ERROR
+from v4.ipv4_validator import BAD_CIDR_ERROR
+from v4.ipv4_validator import CIDR_DICT
 from numpy              import bitwise_and
 from numpy              import bitwise_or
 from numpy              import bitwise_not

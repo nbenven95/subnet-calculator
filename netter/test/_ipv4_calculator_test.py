@@ -1,21 +1,19 @@
 """Tests for _ipv4_calculator.py"""
 
-#|#######################################################################| Imports |########################################################################|#
-
-from v4._ipv4_calculator import parse_addr_str 
-from v4._ipv4_calculator import get_network_id
-from v4._ipv4_calculator import get_wildcard_mask
-from v4._ipv4_calculator import get_broadcast_addr
-from v4._ipv4_calculator import get_num_hosts
-from v4._ipv4_calculator import get_num_subnets
-from v4._ipv4_calculator import get_subnet_class
-from v4._ipv4_calculator import get_first_host
-from v4._ipv4_calculator import get_last_host
-from v4._ipv4_calculator import netmask_to_cidr
-from v4._ipv4_calculator import cidr_to_netmask
-from v4._ipv4_calculator import cidr_to_str
-from v4._ipv4_calculator import get_subnet_info_given_mask
-from v4._ipv4_calculator import get_subnet_info_given_cidr
+from v4.ipv4_calculator import parse_addr_str 
+from v4.ipv4_calculator import get_network_id
+from v4.ipv4_calculator import get_wildcard_mask
+from v4.ipv4_calculator import get_broadcast_addr
+from v4.ipv4_calculator import get_num_hosts
+from v4.ipv4_calculator import get_num_subnets
+from v4.ipv4_calculator import get_subnet_class
+from v4.ipv4_calculator import get_first_host
+from v4.ipv4_calculator import get_last_host
+from v4.ipv4_calculator import netmask_to_cidr
+from v4.ipv4_calculator import cidr_to_netmask
+from v4.ipv4_calculator import cidr_to_str
+from v4.ipv4_calculator import get_subnet_info_given_mask
+from v4.ipv4_calculator import get_subnet_info_given_cidr
 import pytest
 
 #|#################################################################| Function definitions |#################################################################|#

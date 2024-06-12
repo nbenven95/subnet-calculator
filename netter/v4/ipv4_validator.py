@@ -4,7 +4,6 @@ Helper functions for validating IPv4 addresses and subnet masks.
 Author: Noah Benveniste
 https://github.com/noahbenveniste/subnet-calculator
 """
-#|#######################################################################| Imports |########################################################################|#
 
 from re import search
 
@@ -80,11 +79,13 @@ def is_valid_ipv4( ipv4_str: str ) -> bool:
     This regex matches a string that begins with 3 instances of a series of digits followed by a '.'
     The digits can either be 250-255, 200-249, 100-199, or 0-99.
     The final block also matches these digits, but does not look for a '.' at the end
-    Source: https://www.geeksforgeeks.org/python-program-to-validate-an-ip-address/#
+    Source: https://www.geeksforgeeks.org/python-program-to-validate-an-ip-address/
     '''
     ipv4_regex = "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])[.]){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$"
     # Check if the input string matches the regex pattern, return the result
-    return search( ipv4_regex, ipv4_str )
+    result = search( ipv4_regex, ipv4_str )
+    if result == None: return False # No match
+    else: return result.group() == ipv4_str # True - full match, False - partial match
 
 def is_valid_subnet_mask( subnet_mask_str: str ) -> bool:
     """Function that validates the structure of an IPv4 subnet mask
