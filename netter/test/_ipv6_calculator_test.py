@@ -1,7 +1,7 @@
 """Tests for ipv6_calculator.py"""
 
-from v6.ipv6_calculator import get_grp_len
-from v6.ipv6_calculator import remove_grp_len_substr
+from v6.ipv6_calculator import get_subnet_prefix
+from v6.ipv6_calculator import remove_subnet_prefix_substr
 import pytest
 
 VALID_IPV6_ADDR_W_PREFIX_LEN = [
@@ -31,7 +31,7 @@ VALID_IPV6_ADDR_W_PREFIX_LEN = [
 def test_get_grp_len():
     """Tests for get_grp_len"""
     for valid_ipv6 in VALID_IPV6_ADDR_W_PREFIX_LEN:
-        actual = get_grp_len( valid_ipv6 )
+        actual = get_subnet_prefix( valid_ipv6 )
         try:
             expected = int( valid_ipv6[ len( valid_ipv6 )-3: ] )# Three-digit (/100 - /128)
             assert actual == expected
@@ -45,5 +45,5 @@ def test_get_grp_len():
         
 def test_remove_grp_len_substr():
     """Tests for remove_grp_len_substr"""
-    assert remove_grp_len_substr( 'fe80::/10' ) == 'fe80::'
-    assert remove_grp_len_substr( '1:2:3:4:5:6:7:8/64' ) == '1:2:3:4:5:6:7:8'
+    assert remove_subnet_prefix_substr( 'fe80::/10' ) == 'fe80::'
+    assert remove_subnet_prefix_substr( '1:2:3:4:5:6:7:8/64' ) == '1:2:3:4:5:6:7:8'

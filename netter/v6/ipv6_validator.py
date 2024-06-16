@@ -42,9 +42,9 @@ def is_valid_ipv6( ipv6_str: str ) -> bool:
     """
     Function that validates the structure of an IPv6 address.
 
-    Primarily borrowed from https://gist.github.com/dfee/6ed3a4b05cfe7a6faf40a2102408d5d8
-    Added additional pattern match for GRP length at then end of IPv6 addresses
-    (e.g. ::/64) which will be necessary for subnetting.
+    Primarily based on regex from https://gist.github.com/dfee/6ed3a4b05cfe7a6faf40a2102408d5d8
+    Added additional pattern for matching global routing prefix length at then end of IPv6 addresses
+    (e.g. ::/64) which is necessary for subnet calculations.
 
     Args:
         ipv6_str:

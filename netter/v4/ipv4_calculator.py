@@ -294,9 +294,9 @@ def parse_addr_str( addr_str: str ) -> list:
     # Ensure input is a string
     ensure_dtype_str( addr_str )
     # Split the input string into four separate strings
-    oct_list_str = split( '[.]', addr_str )
+    oct_str_list = split( '[.]', addr_str )
     # Convert the string tokens to integers - don't need try/except b/c the string is already validated
-    return [ int(oct) for oct in oct_list_str ]                                                               
+    return [ int(oct) for oct in oct_str_list ]                                                               
 
 def get_first_host( net_id: list ) -> list:
     """Finds the first host address for a subnet given a valid network ID
